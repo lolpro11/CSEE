@@ -1,23 +1,53 @@
-use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 mod classroom_v1_types;
+use classroom_v1_types as cr;
+use env_logger;
+mod drive_v3_types;
+use drive_v3_types as drive;
+use async_google_apis_common as common;
+use crate::classroom_v1_types::ListCoursesResponse;
+
+use std::path::Path;
+use std::sync::Arc;
+
+/// Create a new HTTPS client.
+fn https_client() -> common::TlsClient {
+    let conn = hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().https_or_http().enable_http1().build();
+    let cl = hyper::Client::builder().build(conn);
+    cl
+}
+async fn list_courses(cl: &cr::CoursesService) -> std::result::Result<ListCoursesResponse, async_google_apis_common::Error> {
+    let mut params = cr::CoursesListParams {
+        page_size: Some(50),
+        ..cr::CoursesListParams::default()
+    };
+    cl.list(&params).await
+}
+
 #[tokio::main]
 async fn main() {
-    let secret = yup_oauth2::read_application_secret("credentials.json")
+    env_logger::init();
+
+    let https = https_client();
+    let sec = common::yup_oauth2::read_application_secret("credentials.json")
         .await
-        .expect("credentials.json");
-    let mut auth = InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
+        .expect("client secret couldn't be read.");
+    let auth = common::yup_oauth2::InstalledFlowAuthenticator::builder(
+        sec,
+        common::yup_oauth2::InstalledFlowReturnMethod::HTTPRedirect,
+    )
     .persist_tokens_to_disk("tokens.json")
+    .hyper_client(https.clone())
     .build()
     .await
-    .unwrap();
+    .expect("InstalledFlowAuthenticator failed to build");
 
-    let scopes = &["https://www.googleapis.com/auth/classroom.courses.readonly",
-        "https://www.googleapis.com/auth/classroom.announcements.readonly",
-        "https://www.googleapis.com/auth/classroom.student-submissions.me.readonly",
-        "https://www.googleapis.com/auth/drive"
+    let scopes = vec![
+        cr::ClassroomScopes::ClassroomCourses,
+        cr::ClassroomScopes::ClassroomAnnouncementsReadonly,
+        cr::ClassroomScopes::ClassroomStudentSubmissionsStudentsReadonly,
     ];
-    match auth.token(scopes).await {
-        Ok(token) => println!("Token acquired!"),
-        Err(e) => println!("error: {:?}", e),
-    }
+    let mut cl = cr::CoursesService::new(https, Arc::new(auth));
+    let result = list_courses(&cl).await;
+    println!("{:#?}", result);
+
 }

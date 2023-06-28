@@ -1,3 +1,6 @@
 [submodule "CSEE223"]
 	path = CSEE223
 	url = https://github.com/lolpro11/CSEE223
+[submodule "html/CSEE223"]
+	path = html/CSEE223
+	url = https://github.com/lolpro11/CSEE223

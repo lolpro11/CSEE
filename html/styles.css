@@ -1,0 +1,10 @@
+ .center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+ .titles {
+  text-align: center;
+  font-weight: bold;
+  font-size: 150%;
+}

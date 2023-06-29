@@ -5904,7 +5904,7 @@ impl FilesService {
             do_request_with_headers(&self.client, &full_uri, &headers, "PATCH", opt_request)
                 .await?;
         if let Some(dest) = headers.get(hyper::header::LOCATION) {
-            use std::convert::TryFrom;
+            //use std::convert::TryFrom;
             Ok(ResumableUpload::new(
                 hyper::Uri::try_from(dest.to_str()?)?,
                 &self.client,

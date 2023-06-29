@@ -1,3 +1,4 @@
 credentials.json
 tokens.json
 target/
+*.log

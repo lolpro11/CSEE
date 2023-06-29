@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.12", features = ["full"] }
-google-classroom1 = "*"
 serde = "^1.0"
 serde_json = "^1.0"
 yup-oauth2  = "8.3.0"

@@ -8,6 +8,8 @@ use crate::classroom_v1_types::ListCoursesResponse;
 use crate::classroom_v1_types::ListAnnouncementsResponse;
 use crate::classroom_v1_types::ListCourseWorkResponse;
 use crate::classroom_v1_types::ListCourseWorkMaterialResponse;
+use crate::classroom_v1_types::ListTopicResponse;
+use crate::classroom_v1_types::ListTeachersResponse;
 
 //use std::path::Path;
 use std::sync::Arc;
@@ -50,6 +52,22 @@ async fn materials(cl: &cr::CoursesCourseWorkMaterialsService, id: &str) -> std:
     cl.list(&params).await
 }
 
+async fn topics(cl: &cr::CoursesTopicsService, id: &str) -> std::result::Result<ListTopicResponse, async_google_apis_common::Error> {
+    let params = cr::CoursesTopicsListParams {
+        course_id: id.to_owned(),
+        ..cr::CoursesTopicsListParams::default()
+    };
+    cl.list(&params).await
+}
+
+async fn teachers(cl: &cr::CoursesTeachersService, id: &str) -> std::result::Result<ListTeachersResponse, async_google_apis_common::Error> {
+    let params = cr::CoursesTeachersListParams {
+        course_id: id.to_owned(),
+        ..cr::CoursesTeachersListParams::default()
+    };
+    cl.list(&params).await
+}
+
 fn process_result(result: Result<ListCoursesResponse, async_google_apis_common::Error>) -> Vec<(Option<String>, Option<String>)>{
     let mut course_info: Vec<(Option<String>, Option<String>)> = Vec::new();
     match result {
@@ -58,8 +76,9 @@ fn process_result(result: Result<ListCoursesResponse, async_google_apis_common::
                 Some(courses) => {
                     for course in courses {
                         let id = course.id;
-                        let name = course.name;
-                        course_info.push((id, name));
+                        let name = format!("{}-{}", course.name.expect("Oof").to_string(), course.section.expect("Oof").to_string());
+                        
+                        course_info.push((id, Some(name)));
                     }
                 }
                 None => {
@@ -98,15 +117,15 @@ async fn main() {
         cr::ClassroomScopes::ClassroomCourseworkMeReadonly,
         cr::ClassroomScopes::ClassroomCourseworkStudentsReadonly,
         cr::ClassroomScopes::ClassroomCourseworkmaterialsReadonly,
-        cr::ClassroomScopes::ClassroomGuardianlinksMeReadonly,
-        cr::ClassroomScopes::ClassroomGuardianlinksStudentsReadonly,
+        //cr::ClassroomScopes::ClassroomGuardianlinksMeReadonly,
+        //cr::ClassroomScopes::ClassroomGuardianlinksStudentsReadonly,
         cr::ClassroomScopes::ClassroomRostersReadonly,
         cr::ClassroomScopes::ClassroomStudentSubmissionsMeReadonly,
         cr::ClassroomScopes::ClassroomStudentSubmissionsStudentsReadonly,
         cr::ClassroomScopes::ClassroomTopicsReadonly,
     ];
     match auth.token(&_scopes).await {
-        Ok(token) => println!("The token is {:?}", token),
+        Ok(_token) => (),
         Err(e) => println!("error: {:?}", e),
     }
     let shared_auth = Arc::new(auth);
@@ -117,18 +136,24 @@ async fn main() {
             (Some(course_id), Some(course_name)) => {
                     let cl = cr::CoursesAnnouncementsService::new(https.clone(), shared_auth.clone());
                     let class_announcements = announcements(&cl, &course_id).await;
-                    println!("test");
+
                     let cl = cr::CoursesCourseWorkMaterialsService::new(https.clone(), shared_auth.clone());
                     let class_materials = materials(&cl, &course_id).await;
-                    println!("test");
+
                     let cl = cr::CoursesCourseWorkService::new(https.clone(), shared_auth.clone());
                     let class_assignments = assignments(&cl, &course_id).await;
-                    println!("test");
-                    println!("{}: {:#?} {:#?} {:#?}", course_name, class_announcements, class_materials, class_assignments);
+
+                    let cl = cr::CoursesTopicsService::new(https.clone(), shared_auth.clone());
+                    let class_topics = topics(&cl, &course_id).await;
+
+                    let cl = cr::CoursesTeachersService::new(https.clone(), shared_auth.clone());
+                    let class_teachers = teachers(&cl, &course_id).await;
+                    
+                    println!("{}: {:#?} {:#?} {:#?} {:#?} {:#?}", course_name, class_announcements, class_materials, class_assignments, class_topics, class_teachers);
                 }
-            (Some(course_id), None) => println!("No course name: {}", course_id),
-            (None, Some(course_name)) => println!("{} : No course ID", course_name),
-            (None, None) => println!("Unknown course ID and name"),
+            (Some(_course_id), None) => (),
+            (None, Some(_course_name)) => (),
+            (None, None) => (),
         }
     }
 }

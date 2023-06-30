@@ -10,6 +10,7 @@ dependencies = [
  "env_logger",
  "hyper",
  "hyper-rustls 0.23.2",
+ "minijinja",
  "serde",
  "serde_json",
  "tokio",
@@ -639,6 +640,15 @@ name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
+
+[[package]]
+name = "minijinja"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f40870a194358132836de5c67e5038c279de3bff7a05f5da201ed13f6064b979"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "miniz_oxide"

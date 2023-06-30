@@ -14,6 +14,7 @@ async-google-apis-common = "0.4.0"
 env_logger = "0.10.0"
 hyper = "0.14.27"
 hyper-rustls = "0.23.2"
+minijinja = "1.0.3"
 
 [[bin]]
 name = "html"

@@ -1,0 +1,53 @@
+{# This file takes a list of courses:
+
+ListCoursesResponse {
+  courses: [
+    {
+        {
+            id: String,
+            name: String,
+            section: String,
+            descriptionHeading: String,
+            description: String,
+            room: String,
+            ownerId: String,
+            creationTime: String,
+            updateTime: string,
+            enrollmentCode: string,
+            courseState: String,
+            alternateLink: String,
+            teacherGroupEmail: String,
+            courseGroupEmail: String,
+            teacherFolder: {
+                object (DriveFolder)
+            },
+            courseMaterialSets: [
+                {
+                object (CourseMaterialSet)
+                }
+            ],
+            guardiansEnabled: boolean,
+            calendarId: String,
+            gradebookSettings: {
+                object (GradebookSettings)
+            }
+        }
+    }
+  ],
+  nextPageToken: String
+}
+#}
+
+{% block title %}Classes{% endblock title %}
+
+{% block content %}
+{% if ListCoursesResponse %}
+<ul>
+  {% for course in ListCoursesResponse.courses %}
+    <li>{{ course.id }}</li>
+  {% endfor %}
+</ul>
+{% else %}
+  <h2>You don't seem to be in any classes.</h2>
+{% endif %}
+{% endblock content %}

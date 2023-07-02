@@ -26,27 +26,16 @@ async fn main() {
 
     let mut hub = Classroom::new(hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().https_or_http().enable_http1().build()), auth);
     let courses = hub.courses();
-    let (response, ListCoursesResponse { course_list: Some(courses), .. }): (Response<Body>, ListCoursesResponse) = (match courses.list().page_size().doit().await {
+    let (response, ListCoursesResponse { courses: Some(courses), .. }): (Response<Body>, ListCoursesResponse) = (match courses.list().page_size(1).doit().await {
         Ok(response) => response,
         Err(error) => {
             eprintln!("Error: {}", error);
+            unreachable!()
         }
-    }) else {  };
+    }) else { unreachable!() };
 
-    for course in course_list {
+    for course in courses {
         println!("Courses: {}", (course.id.unwrap()));
-        let (response, ListAnnouncementsResponse { announcements_list: Some(announcements), .. }): (Response<Body>, ListAnnouncementsResponse) = match ccourses.announcements_list(course.id.unwrap()).doit().await {
-            Ok(response) => response,
-            Err(error) => {
-                eprintln!("Error: {}", error);
-            }
-        }
-        let (response, ListAnnouncementsResponse { course_work_student: Some(courses), .. }): (Response<Body>, ListAnnouncementsResponse) = match courses.announcements_list(course.id.unwrap()).doit().await {
-            Ok(response) => response,
-            Err(error) => {
-                eprintln!("Error: {}", error);
-            }
-        }
     }
     //let r = hub.courses().course_work_student_submissions_list(course.id.unwrap()).doit().await
     //let r = hub.courses().course_work_list(course.id.unwrap()).doit().await

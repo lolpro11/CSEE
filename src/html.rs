@@ -16,7 +16,7 @@ async fn main() {
         .await
         .expect("client secret couldn't be read.");
     let auth = classroom1::oauth2::InstalledFlowAuthenticator::builder(
-        sec,
+        secret,
         classroom1::oauth2::InstalledFlowReturnMethod::HTTPRedirect,
     )
     .persist_tokens_to_disk("tokens.json")

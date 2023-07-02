@@ -38,16 +38,12 @@ ListCoursesResponse {
 }
 #}
 
-{% block title %}Classes{% endblock title %}
-
-{% block content %}
-{% if ListCoursesResponse %}
-<ul>
-  {% for course in ListCoursesResponse.courses %}
-    <li>{{ course.id }}</li>
-  {% endfor %}
-</ul>
-{% else %}
-  <h2>You don't seem to be in any classes.</h2>
-{% endif %}
-{% endblock content %}
+<nav>
+  <ul>
+    {%- for item in courses %}
+    <li><a>{{item.name}}, {{ item.id }}</a>
+    {%- endfor %}
+  </ul>
+</nav>
+<main>
+</main>

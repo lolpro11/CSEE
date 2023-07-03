@@ -45,25 +45,19 @@ async fn main() {
                 match announcement.materials {
                     Some(materials) => {
                         for material in materials {
-                            match material.form {
-                                Some(forms) => {
-                                    if forms.form_url.is_some() {
-                                        println!("form: {}", forms.form_url.unwrap());
-                                    }
-                                }
-                                None => ()
-                            }
+                            if material.form.is_some() && material.form.clone().unwrap().form_url.is_some() {
+                                let form_link = material.form.unwrap().form_url.unwrap();
+                                println!("form: {}", form_link);
+                            };
                             match material.drive_file {
                                 Some(drive_file) => {
                                     match drive_file.drive_file {
                                         Some(drive_file) => {
-                                            match drive_file.alternate_link {
-                                                Some(alternate_link) => println!("{}", alternate_link),
-                                                None => (),
+                                            if drive_file.title.is_some() {
+                                                println!("{}", drive_file.title.unwrap());
                                             };
-                                            match drive_file.title {
-                                                Some(title) => println!("{}", title),
-                                                None => (),
+                                            if drive_file.alternate_link.is_some() {
+                                                println!("{}", drive_file.alternate_link.unwrap());
                                             };
                                         }
                                         None => ()

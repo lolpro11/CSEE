@@ -131,7 +131,53 @@ async fn main() {
                         None => ()
                     }
                     println!("Due at {}", date_due);
-                } 
+                }
+                if course.grade_category.is_some() {
+                    println!("{:#?}", course.grade_category.unwrap_or_default());
+                }
+                println!("{}", course.id.unwrap_or_default());
+                match course.materials {
+                    Some(materials) => {
+                        for material in materials {
+                            if material.form.is_some() && material.form.clone().unwrap().form_url.is_some() {
+                                let form_link = material.form.unwrap().form_url.unwrap();
+                                println!("form: {}", form_link);
+                            };
+                            if material.drive_file.clone().is_some() && material.drive_file.clone().unwrap().drive_file.is_some() {
+                                if material.drive_file.clone().unwrap().drive_file.unwrap().title.is_some() {
+                                    println!("{}", material.drive_file.clone().unwrap().drive_file.unwrap().title.unwrap());
+                                };
+                                if material.drive_file.clone().unwrap().drive_file.unwrap().alternate_link.is_some() {
+                                    println!("{}", material.drive_file.clone().unwrap().drive_file.unwrap().alternate_link.unwrap());
+                                };
+                            }
+                        }
+                    }
+                    None => println!("No mats")
+                }
+                if course.max_points.is_some() {
+                    println!("Points: {}", course.max_points.unwrap().to_string());
+                } else {
+                    println!("Not graded");
+                }
+                if course.multiple_choice_question.is_some() {
+                    for choice in course.multiple_choice_question.unwrap().choices.unwrap() {
+                        println!("{}", choice);
+                    }
+                }
+                if course.title.is_some() {
+                    println!("{}", course.title.unwrap());
+                }
+                if course.topic_id.is_some() {
+                    println!("Topic: {}", course.topic_id.unwrap());
+                }
+                if course.work_type.is_some() {
+                    println!("work_type: {}", course.work_type.unwrap());
+                }
+                println!("last updated: {:#?}", match course.update_time {
+                    Some(update_time) => update_time,
+                    None => course.creation_time.unwrap()
+                });
                 println!(" ");
             }
         }

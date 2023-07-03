@@ -29,6 +29,9 @@ async fn main() {
         let course_announcements: (Response<Body>, ListAnnouncementsResponse) = courses.announcements_list(&the_id).doit().await.unwrap();
         if course_announcements.1.announcements.is_some() {
             for announcement in course_announcements.1.announcements.unwrap() {
+                if announcement.alternate_link.is_some() {
+                    println!("Link to announcement {}", announcement.alternate_link.unwrap());
+                };
                 println!("announcement: {}", match announcement.text {
                     Some(text) => text,
                     None => "No text".to_string()
@@ -104,8 +107,8 @@ async fn main() {
                 });
                 let mut date_due: String = "".to_string();
                 if course.due_date.is_some() {
-                    match course.due_date.clone().unwrap().year {
-                        Some(year) => date_due.push_str(&year.to_string()),
+                    match course.due_date.clone().unwrap().month {
+                        Some(month) => date_due.push_str(&month.to_string()),
                         None => ()
                     }
                     date_due.push_str("-");
@@ -114,8 +117,8 @@ async fn main() {
                         None => ()
                     }
                     date_due.push_str("-");
-                    match course.due_date.clone().unwrap().month {
-                        Some(month) => date_due.push_str(&month.to_string()),
+                    match course.due_date.clone().unwrap().year {
+                        Some(year) => date_due.push_str(&year.to_string()),
                         None => ()
                     }
                 }
@@ -130,8 +133,8 @@ async fn main() {
                         Some(minutes) => date_due.push_str(&minutes.to_string()),
                         None => ()
                     }
-                    println!("Due at {}", date_due);
                 }
+                println!("Due at {}", date_due);
                 if course.grade_category.is_some() {
                     println!("{:#?}", course.grade_category.unwrap_or_default());
                 }
@@ -181,9 +184,31 @@ async fn main() {
                 println!(" ");
             }
         }
-        /*let course_materials: (Response<Body>, ListCourseWorkMaterialResponse) = courses.course_work_materials_list(course_id: &the_id).doit().await.unwrap();
-        let teachers: (Response<Body>, ListTeachersResponse) = courses.teachers_list(course_id: &the_id).doit().await.unwrap();
-        let topics: (Response<Body>, ListTopicResponse) = courses.topics_list(course_id: &the_id).doit().await*/
+        let course_materials: (Response<Body>, ListCourseWorkMaterialResponse) = courses.course_work_materials_list(course_id: &the_id).doit().await.unwrap();
+        if course_materials.1.course_work_material.is_some() {
+            for course_mats in course_materials.1.course_work_material.unwrap() {
+                if course_mats.alternate_link.is_some() {
+                    println!("Link to work {}", course_mats.alternate_link.unwrap());
+                } else {
+                    println!("No link");
+                }
+                println!("time made: {:#?}", course.creation_time.unwrap());
+                println!("Author id: {}", match course_mats.creator_user_id {
+                    Some(creator_user_id) => creator_user_id,
+                    None => "Unknown Author id".to_string()
+                });
+                println!("Material: {}", match course_mats.description {
+                    Some(description) => description,
+                    None => "None".to_string()
+                });
+                if course_mats.id.is_some() {
+                    println!("Topic: {}", course_mats.id.unwrap());
+                }
+                
+            }
+        }
+        //let teachers: (Response<Body>, ListTeachersResponse) = courses.teachers_list(course_id: &the_id).doit().await.unwrap();
+        //let topics: (Response<Body>, ListTopicResponse) = courses.topics_list(course_id: &the_id).doit().await*/
         //let course_work_student_submission_list: (Response<Body>, ListStudentSubmissionsResponse) = courses.course_work_student_submissions_list(course_id: &the_id).doit().await.unwrap();
 
     }

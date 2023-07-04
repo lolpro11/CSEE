@@ -18,10 +18,26 @@ async fn main() {
     .build()
     .await
     .expect("InstalledFlowAuthenticator failed to build");
-
+    let _scopes = vec![
+        classroom1::api::Scope::AnnouncementReadonly,
+        classroom1::api::Scope::CourseReadonly,
+        classroom1::api::Scope::CourseworkMeReadonly,
+        classroom1::api::Scope::CourseworkmaterialReadonly,
+        classroom1::api::Scope::ProfileEmail,
+        classroom1::api::Scope::ProfilePhoto,
+        classroom1::api::Scope::RosterReadonly,
+        classroom1::api::Scope::CourseworkStudentReadonly,
+        classroom1::api::Scope::RosterReadonly,
+        classroom1::api::Scope::StudentSubmissionStudentReadonly,
+        classroom1::api::Scope::TopicReadonly,
+    ];
+    match auth.token(&_scopes).await {
+        Ok(_token) => (),
+        Err(e) => println!("error: {:?}", e),
+    }
     let hub = Classroom::new(hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().https_or_http().enable_http1().build()), auth);
     let courses = hub.courses();
-    let response: (Response<Body>, ListCoursesResponse) = courses.list().page_size(100).doit().await.unwrap();
+    let response: (Response<Body>, ListCoursesResponse) = courses.list().page_size(1).doit().await.unwrap();
 
     for course in response.1.courses.unwrap() {
         let the_id = course.id.unwrap().clone();
@@ -48,25 +64,22 @@ async fn main() {
                     Some(id) => id,
                     None => "Unknown id".to_string()
                 });
-                match announcement.materials {
-                    Some(materials) => {
-                        for material in materials {
-                            if material.form.is_some() && material.form.clone().unwrap().form_url.is_some() {
-                                let form_link = material.form.unwrap().form_url.unwrap();
-                                println!("form: {}", form_link);
+                if announcement.materials.is_some() {
+                    for material in announcement.materials.unwrap() {
+                        if material.form.is_some() && material.form.clone().unwrap().form_url.is_some() {
+                            let form_link = material.form.unwrap().form_url.unwrap();
+                            println!("form: {}", form_link);
+                        };
+                        if material.drive_file.clone().is_some() && material.drive_file.clone().unwrap().drive_file.is_some() {
+                            if material.drive_file.clone().unwrap().drive_file.unwrap().title.is_some() {
+                                println!("{}", material.drive_file.clone().unwrap().drive_file.unwrap().title.unwrap());
                             };
-                            if material.drive_file.clone().is_some() && material.drive_file.clone().unwrap().drive_file.is_some() {
-                                if material.drive_file.clone().unwrap().drive_file.unwrap().title.is_some() {
-                                    println!("{}", material.drive_file.clone().unwrap().drive_file.unwrap().title.unwrap());
-                                };
-                                if material.drive_file.clone().unwrap().drive_file.unwrap().alternate_link.is_some() {
-                                    println!("{}", material.drive_file.clone().unwrap().drive_file.unwrap().alternate_link.unwrap());
-                                };
-                            }
+                            if material.drive_file.clone().unwrap().drive_file.unwrap().alternate_link.is_some() {
+                                println!("{}", material.drive_file.clone().unwrap().drive_file.unwrap().alternate_link.unwrap());
+                            };
                         }
                     }
-                    None => println!("No mats")
-                }
+                };
                 println!("last updated: {:#?}", match announcement.update_time {
                     Some(update_time) => update_time,
                     None => announcement.creation_time.unwrap()
@@ -232,14 +245,42 @@ async fn main() {
                     println!("User Id: {}", teacher.user_id.unwrap());
                 }
                 if teacher.profile.is_some() {
-                    teacher_profile = "".to_string();
+                    let mut teacher_profile = "Email: ".to_string();
                     if teacher.profile.clone().unwrap().email_address.is_some() {
-                        
+                        teacher_profile.push_str(&teacher.profile.clone().unwrap().email_address.unwrap().to_string());
                     }
+                    teacher_profile.push_str("\nVerified: ");
+                    if teacher.profile.clone().unwrap().verified_teacher.is_some() {
+                        teacher_profile.push_str(&teacher.profile.clone().unwrap().verified_teacher.unwrap().to_string());
+                    }
+                    teacher_profile.push_str("\nPerms: ");
+                    if teacher.profile.clone().unwrap().permissions.is_some() {
+                        for permission in teacher.profile.clone().unwrap().permissions.unwrap() {
+                            teacher_profile.push_str(&permission.permission.clone().unwrap().to_string());
+                        }   
+                    }
+                    println!("{}", teacher_profile);
+                    /*if teacher.profile.clone().unwrap().photo_url.is_some() {
+                        teacher_profile.push_str(&teacher.profile.clone().unwrap().photo_url.unwrap().to_string());
+                    }*/
                 }
             }
         }
-        //let topics: (Response<Body>, ListTopicResponse) = courses.topics_list(course_id: &the_id).doit().await*/
+        let topics: (Response<Body>, ListTopicResponse) = courses.topics_list(&the_id).doit().await.unwrap();
+        if topics.1.topic.is_some() {
+            for topic in topics.1.topic.unwrap() {
+                if topic.topic_id.is_some() {
+                    println!("Topic Id: {}", topic.topic_id.unwrap());
+                }
+                if topic.name.is_some() {
+                    println!("{}", topic.name.unwrap());
+                }
+                if topic.update_time.is_some() {
+                    println!("last updated: {:#?}", topic.update_time);
+                }
+                println!("");
+            }
+        }
         //let course_work_student_submission_list: (Response<Body>, ListStudentSubmissionsResponse) = courses.course_work_student_submissions_list(course_id: &the_id).doit().await.unwrap();
 
     }

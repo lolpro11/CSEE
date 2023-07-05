@@ -1,9 +1,12 @@
 extern crate google_classroom1 as classroom1;
-use classroom1::{api::{ListAnnouncementsResponse, ListStudentSubmissionsResponse, ListCourseWorkResponse, ListCourseWorkMaterialResponse, ListTeachersResponse, ListTopicResponse, Material, Teacher}};
+use classroom1::{api::{ListAnnouncementsResponse, ListStudentSubmissionsResponse, ListCoursesResponse, ListCourseWorkResponse, ListCourseWorkMaterialResponse, ListTeachersResponse, ListTopicResponse, Material, Teacher, self}, client::serde_with::serde::Serialize};
 use classroom1::{Classroom, hyper, hyper_rustls};
-use google_classroom1::api::ListCoursesResponse;
 use hyper::Body;
 use hyper::Response;
+use tera::Tera;
+use tera::Context;
+use serde_json;
+use serde_json::value::Serializer;
 
 #[tokio::main]
 async fn main() {
@@ -35,9 +38,18 @@ async fn main() {
         Ok(_token) => (),
         Err(e) => println!("error: {:?}", e),
     }
+
     let hub = Classroom::new(hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().https_or_http().enable_http1().build()), auth);
     let courses = hub.courses();
-    let response: (Response<Body>, ListCoursesResponse) = courses.list().page_size(1).doit().await.unwrap();
+    let response: (Response<Body>, ListCoursesResponse) = courses.list().page_size(100).doit().await.unwrap();
+
+    let mut tera = Tera::new("../templates/**/*.html").unwrap();
+    let mut context = Context::new();
+    let course_list = response.1.courses.clone().unwrap();
+    tera.add_template_file("templates/courses.html", Some("course_list")).unwrap();
+    context.insert("courses", &course_list);
+    let rendered = tera.render("course_list", &context);
+    println!("{:#?}", rendered);
 
     for course in response.1.courses.unwrap() {
         let the_id = course.id.unwrap().clone();

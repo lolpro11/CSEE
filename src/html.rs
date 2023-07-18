@@ -5,7 +5,6 @@ use hyper::Body;
 use hyper::Response;
 use tera::Tera;
 use tera::Context;
-use serde_json;
 use std::{fs::File, io::Write};
 
 #[tokio::main]
@@ -41,7 +40,7 @@ async fn main() {
 
     let hub = Classroom::new(hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().https_or_http().enable_http1().build()), auth);
     let courses = hub.courses();
-    let response: (Response<Body>, ListCoursesResponse) = courses.list().page_size(100).doit().await.unwrap();
+    let response: (Response<Body>, ListCoursesResponse) = courses.list().page_size(1).doit().await.unwrap();
 
     let mut tera = Tera::new("../templates/**/*.html").unwrap();
     let mut context = Context::new();
@@ -49,16 +48,26 @@ async fn main() {
     let course_list = response.1.courses.clone().unwrap();
     tera.add_template_file("templates/courses.html", Some("course_list")).unwrap();
     context.insert("courses", &course_list);
-    let rendered = tera.render_to("course_list", &context, &mut buffer).unwrap();
+    tera.render_to("course_list", &context, &mut buffer).unwrap();
     let mut file = File::create("html/courses.html").expect("Failed to create file");
 
     file.write_all(&buffer).expect("Failed to write to file");
+    buffer = Vec::new();
 
     for course in response.1.courses.unwrap() {
-        let the_id = course.id.unwrap().clone();
-        println!("Course: {}, {}", course.name.unwrap(), the_id);
+        let the_id = course.clone().id.unwrap();
+        println!("Course: {}, {}", course.name.clone().unwrap(), the_id);
+        tera.add_template_file("templates/course.html", Some("course")).unwrap();
+        context.insert("course", &course);
         let course_announcements: (Response<Body>, ListAnnouncementsResponse) = courses.announcements_list(&the_id).doit().await.unwrap();
         if course_announcements.1.announcements.is_some() {
+            tera.add_template_file("templates/course_announcements.html", Some("course_announcements")).unwrap();
+            context.insert("course_announcements", &course_announcements.1.announcements.clone().unwrap());
+            tera.render_to("course_announcements", &context, &mut buffer).unwrap();
+            let mut file = File::create("html/course_announcements.html").expect("Failed to create file");
+
+            file.write_all(&buffer).expect("Failed to write to file");
+            buffer = Vec::new();
             for announcement in course_announcements.1.announcements.unwrap() {
                 if announcement.alternate_link.is_some() {
                     println!("Link to announcement {}", announcement.alternate_link.unwrap());
@@ -255,6 +264,7 @@ async fn main() {
         }
         let teachers: (Response<Body>, ListTeachersResponse) = courses.teachers_list(&the_id).doit().await.unwrap();
         if teachers.1.teachers.is_some() {
+            context.insert("teachers", &teachers.1.teachers.clone().unwrap());
             for teacher in teachers.1.teachers.unwrap() {
                 if teacher.user_id.is_some() {
                     println!("User Id: {}", teacher.user_id.unwrap());
@@ -297,7 +307,11 @@ async fn main() {
             }
         }
         //let course_work_student_submission_list: (Response<Body>, ListStudentSubmissionsResponse) = courses.course_work_student_submissions_list(course_id: &the_id).doit().await.unwrap();
-
+        println!("{:#?}", &context);
+        tera.render_to("course", &context, &mut buffer).unwrap();
+        let mut file = File::create(format!("html/courses/{}.html", the_id)).expect("Failed to create file");
+        file.write_all(&buffer).expect("Failed to write to file");
+        buffer = Vec::new();
     }
 }
 

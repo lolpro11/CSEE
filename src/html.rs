@@ -40,7 +40,7 @@ async fn main() {
 
     let hub = Classroom::new(hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().https_or_http().enable_http1().build()), auth);
     let courses = hub.courses();
-    let response: (Response<Body>, ListCoursesResponse) = courses.list().page_size(1).doit().await.unwrap();
+    let response: (Response<Body>, ListCoursesResponse) = courses.list().page_size(100).doit().await.unwrap();
 
     let mut tera = Tera::new("../templates/**/*.html").unwrap();
     let mut context = Context::new();
@@ -265,31 +265,6 @@ async fn main() {
         let teachers: (Response<Body>, ListTeachersResponse) = courses.teachers_list(&the_id).doit().await.unwrap();
         if teachers.1.teachers.is_some() {
             context.insert("teachers", &teachers.1.teachers.clone().unwrap());
-            for teacher in teachers.1.teachers.unwrap() {
-                if teacher.user_id.is_some() {
-                    println!("User Id: {}", teacher.user_id.unwrap());
-                }
-                if teacher.profile.is_some() {
-                    let mut teacher_profile = "Email: ".to_string();
-                    if teacher.profile.clone().unwrap().email_address.is_some() {
-                        teacher_profile.push_str(&teacher.profile.clone().unwrap().email_address.unwrap().to_string());
-                    }
-                    teacher_profile.push_str("\nVerified: ");
-                    if teacher.profile.clone().unwrap().verified_teacher.is_some() {
-                        teacher_profile.push_str(&teacher.profile.clone().unwrap().verified_teacher.unwrap().to_string());
-                    }
-                    teacher_profile.push_str("\nPerms: ");
-                    if teacher.profile.clone().unwrap().permissions.is_some() {
-                        for permission in teacher.profile.clone().unwrap().permissions.unwrap() {
-                            teacher_profile.push_str(&permission.permission.clone().unwrap().to_string());
-                        }   
-                    }
-                    println!("{}", teacher_profile);
-                    /*if teacher.profile.clone().unwrap().photo_url.is_some() {
-                        teacher_profile.push_str(&teacher.profile.clone().unwrap().photo_url.unwrap().to_string());
-                    }*/
-                }
-            }
         }
         let topics: (Response<Body>, ListTopicResponse) = courses.topics_list(&the_id).doit().await.unwrap();
         if topics.1.topic.is_some() {

@@ -19,35 +19,52 @@
     {% for teacher in teachers %}
       {% if teacher.profile %}
         {% for key, value in teacher.profile %}
-            {% if key == "name" %}
+            {% if key == "name" and value %}
               {% for key, value in teacher.profile.name %}
-                  {% if key == "fullName" %}
+                  {% if key == "fullName" and value %}
                     {% set_global teacher_name = "Teacher: " ~ value %}
                   {% endif %}
               {% endfor %}
             {% endif %}
-            {% if key == "emailAddress" %}
+            {% if key == "emailAddress" and value %}
               {% set_global teacher_email = "Email: " ~ value %}
             {% endif %}
-            {% if key == "verifiedTeacher" %}
+            {% if key == "verifiedTeacher" and value %}
               {% set isverified = value | as_str %}
               {% set_global verified_teacher = "Verified: " ~ isverified %}
             {% endif %}
-            {% if key == "photoUrl" and value != "//lh3.googleusercontent.com/a/default-user" %}
-              {% set_global teacher_photo = "https:" ~ value %}
+            {% if key == "photoUrl" and value %}
+                {% set_global teacher_photo = "https:" ~ value %}
             {% endif %}
             {# Unused
-              {% if key == "permissions" %}
+              {% if key == "permissions" and value %}
                 {% set_global teacher_perms = "Permissions: " ~ value %}
               {% endif %}
             #}
         {% endfor %}
       {% endif %}
+      {% if teacher_photo and teacher_photo != "https://lh3.googleusercontent.com/a/default-user" %}
+        <img src={{ teacher_photo }}>
+      {% endif %}
+      {% if teacher_name %}
+        <div> {{ teacher_name }} </div>
+        {% set_global teacher_name = "Teacher: None" %}
+      {% else %}
+        <div> Teacher: None </div>
+      {% endif %}
+      {% if teacher_email %}
+        <div> {{ teacher_email }} </div>
+        {% set_global teacher_email = "Email: None" %}
+      {% else %}
+        <div> Email: None </div>
+      {% endif %}
+      {% if verified_teacher %}
+        <div> {{ verified_teacher }} </div>
+        {% set_global verified_teacher = "Verified: false" %}
+      {% else %}
+        <div> Verified: False </div>
+      {% endif %}
     {% endfor %}
-    <img src={{ teacher_photo }}>
-    <div> {{ teacher_name }} </div>
-    <div> {{ teacher_email }} </div>
-    <div> {{ verified_teacher }} </div>
     {% endblock content %}
     <footer><p xmlns:cc="http://creativecommons.org/ns#" >This work is licensed under <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">CC BY-NC-SA 4.0<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/nc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/sa.svg?ref=chooser-v1"></a></p></footer>
   </body>

@@ -3,19 +3,12 @@
   <head>
     <meta charset="utf-8">
     <title>Made by CSEE</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="../styles.css">
   </head>
-  <body BGCOLOR=#FEF7DA>
+  <body BGCOLOR=#FFFFE0>
     <img align=center, height= 200, width=200, src=../boscotech-clear.png class="center">
     <div class="titles">{{ course.name }}</div>
     {% block content %}
-    {#
-      {% for announcement in course_announcements %}
-      <a href="./{{ announcement.name }}.html">{{ course.name }}</a>
-      <div> </div>
-      {% endfor %}
-      <div> {{ key }}: {{ value }} </div>
-    #}
     {% for teacher in teachers %}
       {% if teacher.profile %}
         {% for key, value in teacher.profile %}
@@ -25,20 +18,20 @@
                     {% set_global teacher_name = "Teacher: " ~ value %}
                   {% endif %}
               {% endfor %}
-            {% endif %}
-            {% if key == "emailAddress" and value %}
+            {% elif key == "emailAddress" and value %}
               {% set_global teacher_email = "Email: " ~ value %}
-            {% endif %}
-            {% if key == "verifiedTeacher" and value %}
+            {% elif key == "verifiedTeacher" and value %}
               {% set isverified = value | as_str %}
               {% set_global verified_teacher = "Verified: " ~ isverified %}
-            {% endif %}
-            {% if key == "photoUrl" and value %}
+            {% elif key == "photoUrl" and value %}
                 {% set_global teacher_photo = "https:" ~ value %}
             {% endif %}
             {# Unused
               {% if key == "permissions" and value %}
                 {% set_global teacher_perms = "Permissions: " ~ value %}
+              {% endif %}
+              {% if key == "id" and value %}
+                {% set_global teacher_id = value %}
               {% endif %}
             #}
         {% endfor %}
@@ -65,6 +58,189 @@
         <div> Verified: False </div>
       {% endif %}
     {% endfor %}
+    <div class="buttons">
+      <a href="#Announcements" class="button">Announcements</a>
+      <a href="#content2" class="button">Show Content 2</a>
+    </div>
+    <div class="tab-folder">
+      <div id="Announcements" class="content">
+        <h2>Announcements</h2>
+        {% for announcement in course_announcements %}
+          {% if announcement %}
+            {% for key, value in announcement %}
+              {% if key == "alternateLink" and value %}
+                {% set_global announcement_link = value %}
+              {% elif key == "creationTime" and value %}
+                {% set_global announcement_time = value %}
+              {% elif key == "creatorUserId" and value %}
+                {% set_global announcement_author = getusername(id=value) %}
+              {% elif key == "text" and value %}
+                {% set_global announcement_text = value %}
+              {% elif key == "updateTime" and value %}
+                {% set_global announcement_update_time = value %}
+              {% endif %}
+              {#
+                {% if key == "state" and value %}
+                  {% set_global announcement_state = value %}
+                {% endif %}
+                {% if key == "id" and value %}
+                  {% set_global announcement_id = value %}
+                {% endif %}
+              #}
+            {% endfor %}
+            {% if announcement_link %}
+              <div> Link to Original Announcement: <a href={{ announcement_link }}> {{ announcement_link }} </a> </div>
+              {% set_global verified_teacher = false %}
+            {% endif %}
+            {% if announcement_author and announcement_author != "None" %}
+              <div> Posted By: {{ announcement_author }} </div>
+            {% endif %}
+            {% if announcement_time %}
+              <div> Posted At: {{ announcement_time | date(format="%d-%m-%y %I:%M %p", timezone="America/Los_Angeles") }} </div>
+            {% endif %}
+            {% if announcement_update_time and announcement_time != announcement_update_time %}
+              <div> Last Updated: {{ announcement_update_time | date(format="%d-%m-%y %I:%M %p", timezone="America/Los_Angeles") }} </div>
+              {% set_global announcement_update_time = false %}
+            {% endif %}
+            {% set_global announcement_time = false %}
+            {% if announcement_text %}
+              <div> {{ announcement_text | linebreaksbr | safe }} </div>
+              {% set_global announcement_text = false %}
+            {% endif %}
+            {% if announcement.materials %}
+              {% for material in announcement.materials %}
+                {% for key, value in material %}
+                  {% if key == "driveFile" and value %}
+                    {% for key, value in value %}
+                      {% if key == "driveFile" and value %}
+                        {% for key, value in value %}
+                          {% if key == "title" and value %}
+                            {% set_global announcement_file_title = value %}
+                          {% elif key == "alternateLink" and value %}
+                            {% set_global announcement_file = value %}
+                          {% elif key == "thumbnailUrl" and value %}
+                            {% set_global announcement_file_thumbnail = value %}
+                          {% endif %}
+                        {% endfor %}
+                        {% if announcement_file_title and not announcement_file and not announcement_file_thumbnail %}
+                          <div> File: {{ announcement_file_title }} </div>
+                        {% elif not announcement_file_title and announcement_file and not announcement_file_thumbnail %}
+                          <div> Link to file: <a href={{ announcement_file }}> {{ announcement_file }} </a> </div>
+                        {% elif announcement_file_title and announcement_file and not announcement_file_thumbnail %}
+                          <div> <a href={{ announcement_file }}> {{ announcement_file_title }} </a> </div>
+                        {% elif not announcement_file_title and not announcement_file and announcement_file_thumbnail %}
+                          <div> File: </div>
+                          <div> <img src={{ announcement_file_thumbnail }}> </div>
+                        {% elif announcement_file_title and not announcement_file and announcement_file_thumbnail %}
+                          <div> File: {{ announcement_file_title }} </div>
+                          <div> <img src={{ announcement_file_thumbnail }}> </div>
+                        {% elif not announcement_file_title and announcement_file and announcement_file_thumbnail %}
+                          <div> File: <a href={{ announcement_file }}> {{ announcement_file }} </a> </div>
+                          <div> <a href={{ announcement_file }}> <img src={{ announcement_file_thumbnail }}> </a> </div>
+                        {% elif announcement_file_title and announcement_file and announcement_file_thumbnail %}
+                          <div> File: <a href={{ announcement_file }}> {{ announcement_file_title }} </a> </div>
+                          <div> <a href={{ announcement_file }}> <img src={{ announcement_file_thumbnail }}> </a> </div>
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  {% elif key == "form" and value %}
+                    {% for key, value in value %}
+                      {% if key == "title" and value %}
+                        {% set_global announcement_form_title = value %}
+                      {% elif key == "form" and value %}
+                        {% set_global announcement_form = value %}
+                      {% elif key == "thumbnailUrl" and value %}
+                        {% set_global announcement_form_thumbnail = value %}
+                      {% elif key == "responseUrl" and value %}
+                        {% set_global announcement_form_reponse = value %}
+                      {% endif %}
+                    {% endfor %}
+                    {% if announcement_form_title and not announcement_form and not announcement_form_thumbnail %}
+                      <div> Google Form: {{ announcement_form_title }} </div>
+                    {% elif not announcement_form_title and announcement_form and not announcement_form_thumbnail %}
+                      <div> Google Form: <a href={{ announcement_form }}> {{ announcement_form }} </a> </div>
+                    {% elif announcement_form_title and announcement_form and not announcement_form_thumbnail %}
+                      <div> <a href={{ announcement_form }}> {{ announcement_form_title }} </a> </div>
+                    {% elif not announcement_form_title and not announcement_form and announcement_form_thumbnail %}
+                      <div> Google Form: </div>
+                      <div> <img src={{ announcement_form_thumbnail }}> </div>
+                    {% elif announcement_form_title and not announcement_form and announcement_form_thumbnail %}
+                      <div> Google Form: {{ announcement_form_title }} </div>
+                      <div> <img src={{ announcement_form_thumbnail }}> </div>
+                    {% elif not announcement_form_title and announcement_form and announcement_form_thumbnail %}
+                      <div> Google Form: <a href={{ announcement_form }}> {{ announcement_form }} </a> </div>
+                      <div> <a href={{ announcement_form }}> <img src={{ announcement_form_thumbnail }}> </a> </div>
+                    {% elif announcement_form_title and announcement_form and announcement_form_thumbnail %}
+                      <div> Google Form: <a href={{ announcement_form }}> {{ announcement_form_title }} </a> </div>
+                      <div> <a href={{ announcement_form }}> <img src={{ announcement_form_thumbnail }}> </a> </div>
+                    {% endif %}
+                    {% if announcement_form_reponse %}
+                      {% if announcement_form_title %}
+                        <div> Responses: <a href={{ announcement_form_reponse }}> {{ announcement_form_title }} </a> </div>
+                      {% else %}
+                        <div> Responses: <a href={{ announcement_form_reponse }}> {{ announcement_form_reponse }} </a> </div>
+                      {% endif %}
+                    {% endif %}
+                  {% elif key == "link" and value %}
+                    {% for key, value in value %}
+                      {% if key == "title" and value %}
+                        {% set_global announcement_link_title = value %}
+                      {% elif key == "url" and value %}
+                        {% set_global announcement_lnk = value %}
+                      {#% elif key == "thumbnailUrl" and value %}
+                        {% set_global announcement_link_thumbnail = value %#}
+                      {% endif %}
+                    {% endfor %}
+                    {% if announcement_link_title and not announcement_lnk %}
+                      <div> Link to: {{ announcement_link_title }} </div>
+                    {% elif not announcement_link_title and announcement_lnk %}
+                      <div> Link: <a href={{ announcement_lnk }}> {{ announcement_lnk }} </a> </div>
+                    {% elif announcement_link_title and announcement_lnk %}
+                      <div> Link: <a href={{ announcement_lnk }}> {{ announcement_link_title }} </a> </div>
+                    {% endif %}
+                  {% elif key == "youtubeVideo" and value %}
+                    {% for key, value in value %}
+                      {% if key == "title" and value %}
+                        {% set_global announcement_video_title = value %}
+                      {% endif %}
+                      {% if key == "alternateLink" and value %}
+                        {% set_global announcement_video = value %}
+                      {% elif key == "thumbnailUrl" and value %}
+                      {% set_global announcement_video_thumbnail = value %}
+                      {% endif %}
+                    {% endfor %}
+                    {% if announcement_video_title and not announcement_video and not announcement_video_thumbnail %}
+                      <div> Video (Link not Provided): {{ announcement_video_title }} </div>
+                    {% elif not announcement_video_title and announcement_video and not announcement_video_thumbnail %}
+                      <div> Link to video: <a href={{ announcement_video }}> {{ announcement_video }} </a> </div>
+                    {% elif announcement_video_title and announcement_video and not announcement_video_thumbnail %}
+                      <div> <a href={{ announcement_video }}> {{ announcement_video_title }} </a> </div>
+                    {% elif not announcement_video_title and not announcement_video and announcement_video_thumbnail %}
+                      <div> Video: </div>
+                      <div> <img src={{ announcement_video_thumbnail }}> </div>
+                    {% elif announcement_video_title and not announcement_video and announcement_video_thumbnail %}
+                      <div> Video: {{ announcement_video_title }} </div>
+                      <div> <img src={{ announcement_video_thumbnail }}> </div>
+                    {% elif not announcement_video_title and announcement_video and announcement_video_thumbnail %}
+                      <div> Video: <a href={{ announcement_video }}> {{ announcement_video }} </a> </div>
+                      <div> <a href={{ announcement_video }}> <img src={{ announcement_video_thumbnail }}> </a> </div>
+                    {% elif announcement_video_title and announcement_video and announcement_video_thumbnail %}
+                      <div> Video: <a href={{ announcement_video }}> {{ announcement_video_title }} </a> </div>
+                      <div> <a href={{ announcement_video }}> <img src={{ announcement_video_thumbnail }}> </a> </div>
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              {% endfor %}
+            {% endif %}
+            <br>
+            {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    <div id="content2" class="content">
+      <h2>Content 2</h2>
+      <p>This is the content of the second section.</p>
+    </div>
     {% endblock content %}
     <footer><p xmlns:cc="http://creativecommons.org/ns#" >This work is licensed under <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">CC BY-NC-SA 4.0<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/nc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/sa.svg?ref=chooser-v1"></a></p></footer>
   </body>

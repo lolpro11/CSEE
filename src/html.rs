@@ -1,11 +1,15 @@
 extern crate google_classroom1 as classroom1;
-use classroom1::{api::{ListAnnouncementsResponse, ListCoursesResponse, ListCourseWorkResponse, ListCourseWorkMaterialResponse, ListTeachersResponse, ListTopicResponse}};
+use classroom1::api::{ListAnnouncementsResponse, ListCoursesResponse, ListCourseWorkResponse, ListCourseWorkMaterialResponse, ListTeachersResponse, ListTopicResponse};
 use classroom1::{Classroom, hyper, hyper_rustls};
 use hyper::Body;
 use hyper::Response;
+use serde_json::Value;
 use tera::Tera;
 use tera::Context;
-use std::{fs::File, io::Write};
+use tokio::task;
+use std::{fs::File, io::Write, collections::HashMap};
+use std::sync::{Arc, Mutex};
+use tokio::runtime::Builder;
 
 #[tokio::main]
 async fn main() {
@@ -51,9 +55,41 @@ async fn main() {
     tera.render_to("course_list", &context, &mut buffer).unwrap();
     let mut file = File::create("html/courses.html").expect("Failed to create file");
 
+    let hub_arc = Arc::new(Mutex::new(hub.clone()));
+    
+    tera.register_function("getusername", move |args: &HashMap<String, Value>| {
+        if let Some(id) = args.get("id").and_then(|v| v.as_str()) {
+            let hub_mutex = hub_arc.lock().unwrap(); // Acquire the lock to access hub
+    
+            let user_profile = task::block_in_place(|| {
+                let runtime = Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap();
+                runtime.block_on(async move {
+                    hub_mutex.user_profiles().get(id).doit().await
+                })
+            });
+            match user_profile {
+                Ok(profile) => {
+                    let name = profile.1.name.unwrap().full_name.unwrap_or_else(|| "None".to_string());
+                    let name_value: Value = Value::String(name);
+                    Ok(name_value)
+                }
+                Err(_) => {
+                    let name = "None".to_string();
+                    let name_value: Value = Value::String(name);
+                    Ok(name_value)
+                },
+            }
+        } else {
+            Err(tera::Error::msg("No 'id' argument provided"))
+        }
+    });
+    
+    
     file.write_all(&buffer).expect("Failed to write to file");
     buffer = Vec::new();
-
     for course in response.1.courses.unwrap() {
         let the_id = course.clone().id.unwrap();
         println!("Course: {}, {}", course.name.clone().unwrap(), the_id);
@@ -61,57 +97,7 @@ async fn main() {
         context.insert("course", &course);
         let course_announcements: (Response<Body>, ListAnnouncementsResponse) = courses.announcements_list(&the_id).doit().await.unwrap();
         if course_announcements.1.announcements.is_some() {
-            tera.add_template_file("templates/course_announcements.html", Some("course_announcements")).unwrap();
             context.insert("course_announcements", &course_announcements.1.announcements.clone().unwrap());
-            tera.render_to("course_announcements", &context, &mut buffer).unwrap();
-            let mut file = File::create("html/course_announcements.html").expect("Failed to create file");
-
-            file.write_all(&buffer).expect("Failed to write to file");
-            buffer = Vec::new();
-            for announcement in course_announcements.1.announcements.unwrap() {
-                if announcement.alternate_link.is_some() {
-                    println!("Link to announcement {}", announcement.alternate_link.unwrap());
-                };
-                println!("announcement: {}", match announcement.text {
-                    Some(text) => text,
-                    None => "No text".to_string()
-                });
-                println!("time made: {:#?}", announcement.creation_time.unwrap());
-                if announcement.scheduled_time.is_some() {
-                    println!("time published: {}", announcement.scheduled_time.unwrap());
-                }
-                println!("Author id: {}", match announcement.creator_user_id {
-                    Some(creator_user_id) => creator_user_id,
-                    None => "Unknown Author id".to_string()
-                });
-                println!("id: {}", match announcement.id {
-                    Some(id) => id,
-                    None => "Unknown id".to_string()
-                });
-                if announcement.materials.is_some() {
-                    for material in announcement.materials.unwrap() {
-                        if material.form.is_some() && material.form.clone().unwrap().form_url.is_some() {
-                            let form_link = material.form.unwrap().form_url.unwrap();
-                            println!("form: {}", form_link);
-                        };
-                        if material.drive_file.clone().is_some() && material.drive_file.clone().unwrap().drive_file.is_some() {
-                            if material.drive_file.clone().unwrap().drive_file.unwrap().title.is_some() {
-                                println!("{}", material.drive_file.clone().unwrap().drive_file.unwrap().title.unwrap());
-                            };
-                            if material.drive_file.clone().unwrap().drive_file.unwrap().alternate_link.is_some() {
-                                println!("{}", material.drive_file.clone().unwrap().drive_file.unwrap().alternate_link.unwrap());
-                            };
-                        }
-                    }
-                };
-                println!("last updated: {:#?}", match announcement.update_time {
-                    Some(update_time) => update_time,
-                    None => announcement.creation_time.unwrap()
-                });
-                println!("");
-            }
-        } else {
-            println!("No announcements\n");
         }
         let course_work: (Response<Body>, ListCourseWorkResponse) = courses.course_work_list(&the_id).doit().await.unwrap();
         if course_work.1.course_work.is_some() {

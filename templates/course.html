@@ -60,7 +60,9 @@
     {% endfor %}
     <div class="buttons">
       <a href="#Announcements" class="button">Announcements</a>
-      <a href="#content2" class="button">Show Content 2</a>
+      <a href="#Coursework" class="button">Coursework</a>
+      <a href="#Materials" class="button">Materials</a>
+      <a href="#Topics" class="button">Topics</a>
     </div>
     <div class="tab-folder">
       <div id="Announcements" class="content">
@@ -141,6 +143,9 @@
                           <div> File: <a href={{ announcement_file }}> {{ announcement_file_title }} </a> </div>
                           <div> <a href={{ announcement_file }}> <img src={{ announcement_file_thumbnail }}> </a> </div>
                         {% endif %}
+                        {% set_global announcement_file_title = false %}
+                        {% set_global announcement_file = false %}
+                        {% set_global announcement_file_thumbnail = false %}
                       {% endif %}
                     {% endfor %}
                   {% elif key == "form" and value %}
@@ -181,6 +186,10 @@
                         <div> Responses: <a href={{ announcement_form_reponse }}> {{ announcement_form_reponse }} </a> </div>
                       {% endif %}
                     {% endif %}
+                    {% set_global announcement_form_title = false %}
+                    {% set_global announcement_form = false %}
+                    {% set_global announcement_form_thumbnail = false %}
+                    {% set_global announcement_form_reponse = false %}
                   {% elif key == "link" and value %}
                     {% for key, value in value %}
                       {% if key == "title" and value %}
@@ -198,6 +207,8 @@
                     {% elif announcement_link_title and announcement_lnk %}
                       <div> Link: <a href={{ announcement_lnk }}> {{ announcement_link_title }} </a> </div>
                     {% endif %}
+                    {% set_global announcement_link_title = false %}
+                    {% set_global announcement_lnk = false %}
                   {% elif key == "youtubeVideo" and value %}
                     {% for key, value in value %}
                       {% if key == "title" and value %}
@@ -228,6 +239,9 @@
                       <div> Video: <a href={{ announcement_video }}> {{ announcement_video_title }} </a> </div>
                       <div> <a href={{ announcement_video }}> <img src={{ announcement_video_thumbnail }}> </a> </div>
                     {% endif %}
+                    {% set_global announcement_video_title = false %}
+                    {% set_global announcement_video = false %}
+                    {% set_global announcement_video_thumbnail = false %}
                   {% endif %}
                 {% endfor %}
               {% endfor %}
@@ -237,12 +251,19 @@
         {% endfor %}
       </div>
     </div>
-    <div id="content2" class="content">
-      <h2>Content 2</h2>
-      <p>This is the content of the second section.</p>
+    <div id="Coursework" class="content">
+      <h2>Coursework</h2>
+      <p>WIP</p>
+    </div>
+    <div id="Materials" class="content">
+      <h2>Course Materials</h2>
+      <p>WIP</p>
+    </div>
+    <div id="Topics" class="content">
+      <h2>Topics</h2>
+      <p>WIP</p>
     </div>
     {% endblock content %}
-    <footer><p xmlns:cc="http://creativecommons.org/ns#" >This work is licensed under <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">CC BY-NC-SA 4.0<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/nc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/sa.svg?ref=chooser-v1"></a></p></footer>
+    <footer><p><a href="../courses.html">Back to Course List</a></p> <p xmlns:cc="http://creativecommons.org/ns#" >This work is licensed under <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">CC BY-NC-SA 4.0<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/nc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/sa.svg?ref=chooser-v1"></a></p></footer>
   </body>
 </html>
-

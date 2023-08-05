@@ -56,7 +56,7 @@ async fn main() {
     let mut file = File::create("html/courses.html").expect("Failed to create file");
 
     let hub_arc = Arc::new(Mutex::new(hub.clone()));
-    
+
     tera.register_function("getusername", move |args: &HashMap<String, Value>| {
         if let Some(id) = args.get("id").and_then(|v| v.as_str()) {
             let hub_mutex = hub_arc.lock().unwrap(); // Acquire the lock to access hub

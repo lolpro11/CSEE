@@ -1,11 +1,11 @@
 use actix_web::{web, App, HttpResponse, HttpServer, Result, ResponseError};
+use chrono::{Datelike, Timelike};
 use oauth2::basic::{BasicClient, BasicTokenType};
 use oauth2::reqwest::http_client;
 use oauth2::{
-    AuthorizationCode, AuthUrl, ClientId, ClientSecret, CsrfToken, TokenUrl, RedirectUrl, TokenResponse, EmptyExtraTokenFields, AccessToken, RefreshToken, Scope,
+    AuthorizationCode, AuthUrl, ClientId, ClientSecret, CsrfToken, TokenUrl, RedirectUrl, TokenResponse, EmptyExtraTokenFields, AccessToken, RefreshToken, Scope, StandardTokenResponse,
 };
 use serde::{Deserialize, Serialize};
-use oauth2::StandardTokenResponse;
 use std::fs::File;
 use std::io::{self, Read, Write};
 
@@ -83,7 +83,7 @@ async fn main() -> io::Result<()> {
 
 async fn login() -> HttpResponse {
     // Redirect the user to the Google OAuth2 authorization URL
-    let (auth_url, csrf_state) = CLIENT
+    let (auth_url, _csrf_state) = CLIENT
         .authorize_url(CsrfToken::new_random)
         .add_scope(Scope::new("https://www.googleapis.com/auth/drive.readonly".to_string()))
         .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.announcements.readonly".to_string()))
@@ -95,8 +95,6 @@ async fn login() -> HttpResponse {
         .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.profile.emails".to_string()))
         .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.profile.photos".to_string()))
         .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.topics.readonly".to_string()))
-        .add_scope(Scope::new("email".to_string()))
-        .add_scope(Scope::new("profile".to_string()))
         .url();
     
     HttpResponse::Found()
@@ -125,7 +123,7 @@ async fn auth_callback(params: web::Query<AuthCallbackParams>) -> Result<HttpRes
     .unwrap();
 
     // Save the token response to a JSON file
-    save_tokens_to_file(&token_response)?;
+    save_tokens_to_file(&[token_response])?; // Save a list with a single token response
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -140,7 +138,7 @@ struct MyTokenResponse {
 struct TokenInfo {
     access_token: AccessToken,
     refresh_token: Option<RefreshToken>,
-    expires_at: i64, // Change this to i64
+    expires_at: [i64; 9], // Array of integers [year, month, day, hour, minute, second, millisecond, microsecond, nanosecond]
     id_token: Option<String>,
 }
 
@@ -153,8 +151,24 @@ impl From<&StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>> for MyT
             token: TokenInfo {
                 access_token: token_response.access_token().clone(),
                 refresh_token: token_response.refresh_token().cloned(),
-                expires_at: token_response.expires_in().map_or(0, |duration| duration.as_secs() as i64),
-                id_token: None, // You can add the id_token if it is present in your token response
+                expires_at: token_response
+                    .expires_in()
+                    .map_or([0; 9], |duration| {
+                        let now = chrono::Utc::now();
+                        let expiration_time = now + chrono::Duration::from_std(duration).unwrap();
+                        [
+                            expiration_time.year() as i64,
+                            expiration_time.ordinal() as i64,
+                            expiration_time.hour() as i64,
+                            expiration_time.minute() as i64,
+                            expiration_time.second() as i64,
+                            expiration_time.timestamp_subsec_nanos() as i64,
+                            0,
+                            0,
+                            0,
+                        ]
+                    }),
+                id_token: None,
             },
         }
     }
@@ -172,11 +186,32 @@ impl From<std::io::Error> for MyError {
     }
 }
 
-fn save_tokens_to_file(token_response: &StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>) -> io::Result<()> {
-    let my_token_response: MyTokenResponse = token_response.into();
-    let json = serde_json::to_string(&my_token_response)
-        .expect("Failed to serialize token response");
+fn save_tokens_to_file(token_responses: &[StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>]) -> io::Result<()> {
+    // Read the existing tokens from the file, if it exists
+    let mut existing_tokens: Vec<MyTokenResponse> = match File::open("tokens.json") {
+        Ok(mut file) => {
+            let mut contents = String::new();
+            file.read_to_string(&mut contents)?;
+            serde_json::from_str(&contents).unwrap_or_else(|_| Vec::new())
+        }
+        Err(_) => Vec::new(),
+    };
+
+    // Convert the new token_responses to MyTokenResponse
+    let new_tokens: Vec<MyTokenResponse> = token_responses.iter().map(|token_response| token_response.into()).collect();
+
+    // Insert the new tokens at index 0, pushing the existing ones down
+    existing_tokens.splice(0..0, new_tokens);
+
+    // Serialize the updated tokens to JSON
+    let json = serde_json::to_string(&existing_tokens)
+        .expect("Failed to serialize token responses");
+
+    // Write the updated tokens back to the file
     let mut file = File::create("tokens.json")?;
     file.write_all(json.as_bytes())?;
+
     Ok(())
 }
+
+

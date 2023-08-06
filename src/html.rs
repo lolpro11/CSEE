@@ -1,5 +1,5 @@
 extern crate google_classroom1 as classroom1;
-use classroom1::api::{ListAnnouncementsResponse, ListCoursesResponse, ListCourseWorkResponse, ListCourseWorkMaterialResponse, ListTeachersResponse, ListTopicResponse};
+use classroom1::api::{ListAnnouncementsResponse, ListCoursesResponse, ListCourseWorkResponse, ListCourseWorkMaterialResponse, ListTeachersResponse, ListTopicResponse, self};
 use classroom1::{Classroom, hyper, hyper_rustls};
 use hyper::Body;
 use hyper::Response;
@@ -32,7 +32,6 @@ async fn main() {
         classroom1::api::Scope::ProfileEmail,
         classroom1::api::Scope::ProfilePhoto,
         classroom1::api::Scope::RosterReadonly,
-        classroom1::api::Scope::CourseworkStudentReadonly,
         classroom1::api::Scope::RosterReadonly,
         classroom1::api::Scope::StudentSubmissionStudentReadonly,
         classroom1::api::Scope::TopicReadonly,

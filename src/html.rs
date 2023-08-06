@@ -1,8 +1,9 @@
 extern crate google_classroom1 as classroom1;
-use classroom1::api::{ListAnnouncementsResponse, ListCoursesResponse, ListCourseWorkResponse, ListCourseWorkMaterialResponse, ListTeachersResponse, ListTopicResponse, self};
+use classroom1::api::{ListAnnouncementsResponse, ListCoursesResponse, ListCourseWorkResponse, ListCourseWorkMaterialResponse, ListTeachersResponse, ListTopicResponse};
 use classroom1::{Classroom, hyper, hyper_rustls};
 use hyper::Body;
 use hyper::Response;
+use oauth2::Scope;
 use serde_json::Value;
 use tera::Tera;
 use tera::Context;
@@ -25,16 +26,16 @@ async fn main() {
     .await
     .expect("InstalledFlowAuthenticator failed to build");
     let _scopes = vec![
-        classroom1::api::Scope::AnnouncementReadonly,
-        classroom1::api::Scope::CourseReadonly,
-        classroom1::api::Scope::CourseworkMeReadonly,
-        classroom1::api::Scope::CourseworkmaterialReadonly,
-        classroom1::api::Scope::ProfileEmail,
-        classroom1::api::Scope::ProfilePhoto,
-        classroom1::api::Scope::RosterReadonly,
-        classroom1::api::Scope::RosterReadonly,
-        classroom1::api::Scope::StudentSubmissionStudentReadonly,
-        classroom1::api::Scope::TopicReadonly,
+        Scope::new("https://www.googleapis.com/auth/drive.readonly".to_string()),
+        Scope::new("https://www.googleapis.com/auth/classroom.announcements.readonly".to_string()),
+        Scope::new("https://www.googleapis.com/auth/classroom.courses.readonly".to_string()),
+        Scope::new("https://www.googleapis.com/auth/classroom.coursework.students.readonly".to_string()),
+        Scope::new("https://www.googleapis.com/auth/classroom.coursework.me.readonly".to_string()),
+        Scope::new("https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly".to_string()),
+        Scope::new("https://www.googleapis.com/auth/classroom.rosters.readonly".to_string()),
+        Scope::new("https://www.googleapis.com/auth/classroom.profile.emails".to_string()),
+        Scope::new("https://www.googleapis.com/auth/classroom.profile.photos".to_string()),
+        Scope::new("https://www.googleapis.com/auth/classroom.topics.readonly".to_string()),
     ];
     match auth.token(&_scopes).await {
         Ok(_token) => (),
@@ -58,7 +59,7 @@ async fn main() {
 
     tera.register_function("getusername", move |args: &HashMap<String, Value>| {
         if let Some(id) = args.get("id").and_then(|v| v.as_str()) {
-            let hub_mutex = hub_arc.lock().unwrap(); // Acquire the lock to access hub
+            let hub_mutex = &hub_arc.lock().unwrap(); // Acquire the lock to access hub
     
             let user_profile = task::block_in_place(|| {
                 let runtime = Builder::new_current_thread()

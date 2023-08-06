@@ -124,14 +124,6 @@ async fn auth_callback(params: web::Query<AuthCallbackParams>) -> Result<HttpRes
     .map_err(|error| MyError(format!("Failed to exchange code for access token: {}", error)))?
     .unwrap();
 
-    println!("Google returned the following code:\n{}\n", params.code);
-    println!(
-        "Google returned the following state:\n{} (expected `{}`)\n",
-        params.state,
-        csrf_secret
-    );
-    println!("Google returned the following token:\n{:?}\n", token_response);
-
     // Save the token response to a JSON file
     save_tokens_to_file(&token_response)?;
 
@@ -140,21 +132,30 @@ async fn auth_callback(params: web::Query<AuthCallbackParams>) -> Result<HttpRes
 
 #[derive(Debug, Serialize, Deserialize)]
 struct MyTokenResponse {
+    scopes: Vec<String>,
+    token: TokenInfo,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct TokenInfo {
     access_token: AccessToken,
-    token_type: String,
-    expires_in: Option<i64>,
     refresh_token: Option<RefreshToken>,
-    // Add any other fields you may need
+    expires_at: i64, // Change this to i64
+    id_token: Option<String>,
 }
 
 impl From<&StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>> for MyTokenResponse {
     fn from(token_response: &StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>) -> Self {
         MyTokenResponse {
-            access_token: token_response.access_token().clone(),
-            token_type: format!("{:?}", token_response.token_type()),
-            expires_in: token_response.expires_in().map(|duration| duration.as_secs() as i64),
-            refresh_token: token_response.refresh_token().cloned(),
-            // Add any other fields you may need
+            scopes: token_response.scopes().map_or_else(Vec::new, |scopes| {
+                scopes.iter().map(|scope| scope.as_str().to_owned()).collect()
+            }),
+            token: TokenInfo {
+                access_token: token_response.access_token().clone(),
+                refresh_token: token_response.refresh_token().cloned(),
+                expires_at: token_response.expires_in().map_or(0, |duration| duration.as_secs() as i64),
+                id_token: None, // You can add the id_token if it is present in your token response
+            },
         }
     }
 }

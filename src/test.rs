@@ -1,16 +1,13 @@
-use actix_web::error::ResponseError;
-use actix_web::{web, App, HttpServer, HttpResponse, Result};
-use oauth2::basic::BasicClient;
+use actix_web::{web, App, HttpResponse, HttpServer, Result, ResponseError};
+use oauth2::basic::{BasicClient, BasicTokenType};
 use oauth2::reqwest::http_client;
 use oauth2::{
-    AuthUrl, ClientId, ClientSecret, CsrfToken, TokenUrl, RedirectUrl, TokenResponse,
+    AuthorizationCode, AuthUrl, ClientId, ClientSecret, CsrfToken, TokenUrl, RedirectUrl, TokenResponse, EmptyExtraTokenFields, AccessToken, RefreshToken, Scope,
 };
-use oauth2::Scope;
-use oauth2::AuthorizationCode;
-use serde::Deserialize;
-use std::error::Error;
+use serde::{Deserialize, Serialize};
+use oauth2::StandardTokenResponse;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 
 // AuthCallbackParams struct for deserialization of query parameters
 #[derive(Deserialize)]
@@ -46,13 +43,6 @@ lazy_static::lazy_static! {
         let redirect_url =
             RedirectUrl::new("http://localhost:8080/auth/callback".to_string())
                 .expect("Failed to parse Redirect URL");
-
-        // Scopes requested from Google (you can add more if needed)
-        let scopes = vec![
-            Scope::new("https://www.googleapis.com/auth/userinfo.email".to_string()),
-            Scope::new("https://www.googleapis.com/auth/userinfo.profile".to_string()),
-        ];
-
         // Create an OAuth2 client
         BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
             .set_redirect_uri(redirect_url)
@@ -95,6 +85,16 @@ async fn login() -> HttpResponse {
     // Redirect the user to the Google OAuth2 authorization URL
     let (auth_url, csrf_state) = CLIENT
         .authorize_url(CsrfToken::new_random)
+        .add_scope(Scope::new("https://www.googleapis.com/auth/drive.readonly".to_string()))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.announcements.readonly".to_string()))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.courses.readonly".to_string()))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.coursework.students.readonly".to_string()))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.coursework.me.readonly".to_string()))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly".to_string()))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.rosters.readonly".to_string()))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.profile.emails".to_string()))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.profile.photos".to_string()))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/classroom.topics.readonly".to_string()))
         .add_scope(Scope::new("email".to_string()))
         .add_scope(Scope::new("profile".to_string()))
         .url();
@@ -121,11 +121,61 @@ async fn auth_callback(params: web::Query<AuthCallbackParams>) -> Result<HttpRes
         CLIENT.exchange_code(code).request(http_client)
     })
     .await
-    .map_err(|error| MyError(format!("Failed to exchange code for access token: {}", error)))?.unwrap();
+    .map_err(|error| MyError(format!("Failed to exchange code for access token: {}", error)))?
+    .unwrap();
 
+    println!("Google returned the following code:\n{}\n", params.code);
+    println!(
+        "Google returned the following state:\n{} (expected `{}`)\n",
+        params.state,
+        csrf_secret
+    );
+    println!("Google returned the following token:\n{:?}\n", token_response);
 
-    // You can now use the access token as needed
-    Ok(HttpResponse::Ok()
-        .content_type("text/html")
-        .body(format!("Access token: {:?}", token_response.access_token().secret())))
+    // Save the token response to a JSON file
+    save_tokens_to_file(&token_response)?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct MyTokenResponse {
+    access_token: AccessToken,
+    token_type: String,
+    expires_in: Option<i64>,
+    refresh_token: Option<RefreshToken>,
+    // Add any other fields you may need
+}
+
+impl From<&StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>> for MyTokenResponse {
+    fn from(token_response: &StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>) -> Self {
+        MyTokenResponse {
+            access_token: token_response.access_token().clone(),
+            token_type: format!("{:?}", token_response.token_type()),
+            expires_in: token_response.expires_in().map(|duration| duration.as_secs() as i64),
+            refresh_token: token_response.refresh_token().cloned(),
+            // Add any other fields you may need
+        }
+    }
+}
+
+impl From<StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>> for MyTokenResponse {
+    fn from(token_response: StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>) -> Self {
+        MyTokenResponse::from(&token_response)
+    }
+}
+
+impl From<std::io::Error> for MyError {
+    fn from(error: std::io::Error) -> Self {
+        MyError(format!("IO Error: {}", error))
+    }
+}
+
+fn save_tokens_to_file(token_response: &StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>) -> io::Result<()> {
+    let my_token_response: MyTokenResponse = token_response.into();
+    let json = serde_json::to_string(&my_token_response)
+        .expect("Failed to serialize token response");
+    let mut file = File::create("tokens.json")?;
+    file.write_all(json.as_bytes())?;
+    Ok(())
 }

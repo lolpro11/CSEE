@@ -59,7 +59,9 @@
       {% if course_announcements %}
        <a href="#Announcements" class="button">Announcements</a>
       {% endif %}
-      <a href="#Coursework" class="button">Coursework</a>
+      {% if coursework %}
+       <a href="#Coursework" class="button">Coursework</a>
+      {% endif %}
       {% if course_materials %}
        <a href="#Materials" class="button">Materials</a>
       {% endif %}
@@ -157,7 +159,7 @@
                     {% for key, value in value %}
                       {% if key == "title" and value %}
                         {% set_global announcement_form_title = value %}
-                      {% elif key == "form" and value %}
+                      {% elif key == "formUrl" and value %}
                         {% set_global announcement_form = value %}
                       {% elif key == "thumbnailUrl" and value and url_ok(url=value) %}
                         {% set_global announcement_form_thumbnail = value %}
@@ -201,7 +203,7 @@
                         {% set_global announcement_link_title = value %}
                       {% elif key == "url" and value %}
                         {% set_global announcement_lnk = value %}
-                      { elif key == "thumbnailUrl" and value and url_ok(url=value) %}
+                      {% elif key == "thumbnailUrl" and value and url_ok(url=value) %}
                         {% set_global announcement_link_thumbnail = value %}
                       {% endif %}
                     {% endfor %}
@@ -256,10 +258,297 @@
         {% endfor %}
       </div>
      {% endif %}
-    <div id="Coursework" class="content">
-      <h2>Coursework</h2>
-      <p>WIP</p>
-    </div>
+    {% if coursework %}
+     <div id="Coursework" class="content">
+       <h2>Coursework</h2>
+       {% for work in coursework %}
+          {% if work %}
+           {% set_global work_link = false %}
+           {% set_global work_time = false %}
+           {% set_global work_time = false %}
+           {% set_global work_author = false %}
+           {% set_global work_description = false %}
+           {% set_global work_due_date = false %}
+           {% set_global work_due_time = false %}
+           {% set_global work_max_points = false %}
+           {% set_global work_grade_category_name = false %}
+           {% set_global work_update_time = false %}
+           {% set_global work_title = false %}
+           {% set_global work_type = false %}
+           {% set_global work_utc_date = false %}
+           {% set_global work_year = false %}
+           {% set_global work_month = false %}
+           {% set_global work_day = false %}
+           {% set_global work_hours = false %}
+           {% set_global work_min = false %}
+           {% set_global work_sec = false %}
+            {% for key, value in work %}
+             {% if key == "alternateLink" and value %}
+               {% set_global work_link = value %}
+             {% elif key == "creationTime" and value %}
+               {% set_global work_time = value %}
+             {% elif key == "creatorUserId" and value %}
+               {% set_global work_author = getusername(id=value) %}
+             {% elif key == "description" and value %}
+               {% set_global work_description = value %}
+             {% elif key == "dueDate" and value %}
+               {% set_global work_due_date = value %}
+             {% elif key == "dueTime" and value %}
+               {% set_global work_due_time = value %}
+             {% elif key == "gradeCategory" and value and value.name %}
+               {% set_global work_grade_category_name = value.name %}
+             {% elif key == "maxPoints" and value %}
+               {% set_global work_max_points = value %}
+             {% elif key == "multipleChoiceQuestion" and value %}
+               {% set_global work_grade_mcq = value %}
+             {% elif key == "updateTime" and value %}
+               {% set_global work_update_time = value %}
+             {% elif key == "title" and value %}
+               {% set_global work_title = value %}
+             {% elif key == "workType" and value %}
+               {% set_global work_type = value %}
+             {% endif %}
+              {#
+                {% if key == "state" and value %}
+                  {% set_global work_state = value %}
+                {% endif %}
+                {% if key == "id" and value %}
+                  {% set_global work_id = value %}
+                {% endif %}
+                {% if key == "topicId" and value %}
+                  {% set_global work_topic_id = value %}
+                {% endif %}
+             #}
+            {% endfor %}
+            {% if work_link and work_title %}
+              <div> <a href={{ work_link }}> {{ work_title }} </a> </div>
+            {% elif work_link %}
+              <div> Link to Original Assignment: <a href={{ work_link }}> {{ work_link }} </a> </div>
+            {% endif %}
+            {% if work_author and work_author != "None" %}
+              <div> Created By: {{ work_author }} </div>
+            {% endif %}
+            {% if work_update_time and work_time != work_update_time %}
+              <div> Last Updated: {{ work_update_time | date(format="%m-%d-%y %I:%M %p", timezone="America/Los_Angeles") }} </div>
+            {% elif work_time %}
+              <div> Created At: {{ work_time | date(format="%m-%d-%y %I:%M %p", timezone="America/Los_Angeles") }} </div>
+            {% endif %}
+            {% if work_grade_category_name %}
+              <div> Assignment in {{ work_grade_category_name }} </div>
+            {% endif %}
+            {% if work_due_date and work_due_time %}
+              {% set_global work_utc_date = "" %}
+              {% set_global work_utc_date = work_utc_date ~ work_due_date.year | as_str %}
+              {% set_global work_month = work_due_date.month | as_str %}
+              {% if work_month | length == 2 %}
+                {% set_global work_utc_date = work_utc_date ~ "-" ~ work_month %}
+              {% else %}
+                {% set_global work_utc_date = work_utc_date ~ "-0" ~ work_month %}
+              {% endif %}
+              {% set_global work_day = work_due_date.day | as_str %}
+              {% if work_day | length == 2 %}
+                {% set_global work_utc_date = work_utc_date ~ "-" ~ work_day %}
+              {% else %}
+                {% set_global work_utc_date = work_utc_date ~ "-0" ~ work_day %}
+              {% endif %}
+              {% set_global work_utc_date = work_utc_date ~ "T" %}
+              {% set_global work_hours = work_due_time.hours | as_str %}
+              {% if work_hours | length == 2 %}
+                {% set_global work_utc_date = work_utc_date ~ "" ~ work_hours %}
+              {% else %}
+                {% set_global work_utc_date = work_utc_date ~ "0" ~ work_hours %}
+              {% endif %}
+              {% set_global work_min = work_due_time.minutes | as_str %}
+              {% if work_min | length == 2 %}
+                {% set_global work_utc_date = work_utc_date ~ ":" ~ work_min %}
+              {% else %}
+                {% set_global work_utc_date = work_utc_date ~ ":0" ~ work_min %}
+              {% endif %}
+              {% set_global work_sec = work_due_time.seconds | as_str %}
+              {% if work_sec | length == 2 %}
+                {% set_global work_utc_date = work_utc_date ~ ":" ~ work_sec %}
+              {% else %}
+                {% set_global work_utc_date = work_utc_date ~ ":0" ~ work_sec %}
+              {% endif %}
+              {% set_global work_utc_date = work_utc_date ~ "Z" %}
+              <div> Due Date: {{ work_utc_date | date(format="%m-%d-%y %I:%M %p", timezone="America/Los_Angeles") }} </div>
+            {% elif work_due_date %}
+              {% set_global work_utc_date = "" %}
+              {% set_global work_utc_date = work_utc_date ~ work_due_date.year | as_str %}
+              {% if work_due_date.month | as_str | length == 2 %}
+                {% set_global work_utc_date = work_utc_date ~ work_due_date.month | as_str %}
+              {% else %}
+                {% set_global work_utc_date = work_utc_date ~ "0" ~ work_due_date.month | as_str %}
+              {% endif %}
+              {% if work_due_date.day | as_str | length == 2 %}
+                {% set_global work_utc_date = work_utc_date ~ work_due_date.day | as_str %}
+              {% else %}
+                {% set_global work_utc_date = work_utc_date ~ "0" ~ work_due_date.day | as_str %}
+              {% endif %}
+              {% set_global work_utc_date = work_utc_date ~ "T00:00:00Z" %}
+              <div> Due Date: {{ work_utc_date | date(format="%m-%d-%y", timezone="America/Los_Angeles") }} </div>
+            {% endif %}
+            {% set_global work_utc_date = false %}
+            {% if work_max_points %}
+              <div> {{ work_max_points }} points </div>
+            {% endif %}
+            {% if work_type %}
+              <div> Type of Coursework: {{ work_type }} </div>
+            {% endif %}
+            {% if work_description %}
+              <div> {{ work_description }} </div>
+            {% endif %}
+            {% if work_grade_mcq %}
+              <div> Choices: </div>
+              {% for key,choice in work_grade_mcq %}
+                <div> {{ choice }} </div>
+              {% endfor %}
+            {% endif %}
+            {% if work_text %}
+              <div> {{ work_text | linebreaksbr | safe }} </div>
+            {% endif %}
+            {% if work.materials %}
+              {% for material in work.materials %}
+                {% for key, value in material %}
+                  {% if key == "driveFile" and value %}
+                    {% for key, value in value %}
+                      {% if key == "driveFile" and value %}
+                        {% for key, value in value %}
+                          {% if key == "title" and value %}
+                            {% set_global work_file_title = value %}
+                          {% elif key == "alternateLink" and value %}
+                            {% set_global work_file = value %}
+                          {% elif key == "thumbnailUrl" and value and url_ok(url=value) %}
+                            {% set_global work_file_thumbnail = value %}
+                          {% endif %}
+                        {% endfor %}
+                        {% if work_file_title and not work_file and not work_file_thumbnail %}
+                          <div> File: {{ work_file_title }} </div>
+                        {% elif not work_file_title and work_file and not work_file_thumbnail %}
+                          <div> Link to file: <a href={{ work_file }}> {{ work_file }} </a> </div>
+                        {% elif work_file_title and work_file and not work_file_thumbnail %}
+                          <div> <a href={{ work_file }}> {{ work_file_title }} </a> </div>
+                        {% elif not work_file_title and not work_file and work_file_thumbnail %}
+                          <div> File: </div>
+                          <div> <img src={{ work_file_thumbnail }}> </div>
+                        {% elif work_file_title and not work_file and work_file_thumbnail %}
+                          <div> File: {{ work_file_title }} </div>
+                          <div> <img src={{ work_file_thumbnail }}> </div>
+                        {% elif not work_file_title and work_file and work_file_thumbnail %}
+                          <div> File: <a href={{ work_file }}> {{ work_file }} </a> </div>
+                          <div> <a href={{ work_file }}> <img src={{ work_file_thumbnail }}> </a> </div>
+                        {% elif work_file_title and work_file and work_file_thumbnail %}
+                          <div> File: <a href={{ work_file }}> {{ work_file_title }} </a> </div>
+                          <div> <a href={{ work_file }}> <img src={{ work_file_thumbnail }}> </a> </div>
+                        {% endif %}
+                        {% set_global work_file_title = false %}
+                        {% set_global work_file = false %}
+                        {% set_global work_file_thumbnail = false %}
+                      {% endif %}
+                    {% endfor %}
+                  {% elif key == "form" and value %}
+                    {% for key, value in value %}
+                      {% if key == "title" and value %}
+                        {% set_global work_form_title = value %}
+                      {% elif key == "formUrl" and value %}
+                        {% set_global work_form = value %}
+                      {% elif key == "thumbnailUrl" and value and url_ok(url=value) %}
+                        {% set_global work_form_thumbnail = value %}
+                      {% elif key == "responseUrl" and value %}
+                        {% set_global work_form_reponse = value %}
+                      {% endif %}
+                    {% endfor %}
+                    {% if work_form_title and not work_form and not work_form_thumbnail %}
+                      <div> Google Form: {{ work_form_title }} </div>
+                    {% elif not work_form_title and work_form and not work_form_thumbnail %}
+                      <div> Google Form: <a href={{ work_form }}> {{ work_form }} </a> </div>
+                    {% elif work_form_title and work_form and not work_form_thumbnail %}
+                      <div> <a href={{ work_form }}> {{ work_form_title }} </a> </div>
+                    {% elif not work_form_title and not work_form and work_form_thumbnail %}
+                      <div> Google Form: </div>
+                      <div> <img src={{ work_form_thumbnail }}> </div>
+                    {% elif work_form_title and not work_form and work_form_thumbnail %}
+                      <div> Google Form: {{ work_form_title }} </div>
+                      <div> <img src={{ work_form_thumbnail }}> </div>
+                    {% elif not work_form_title and work_form and work_form_thumbnail %}
+                      <div> Google Form: <a href={{ work_form }}> {{ work_form }} </a> </div>
+                      <div> <a href={{ work_form }}> <img src={{ work_form_thumbnail }}> </a> </div>
+                    {% elif work_form_title and work_form and work_form_thumbnail %}
+                      <div> Google Form: <a href={{ work_form }}> {{ work_form_title }} </a> </div>
+                      <div> <a href={{ work_form }}> <img src={{ work_form_thumbnail }}> </a> </div>
+                    {% endif %}
+                    {% if work_form_reponse %}
+                      {% if work_form_title %}
+                        <div> Responses: <a href={{ work_form_reponse }}> {{ work_form_title }} </a> </div>
+                      {% else %}
+                        <div> Responses: <a href={{ work_form_reponse }}> {{ work_form_reponse }} </a> </div>
+                      {% endif %}
+                    {% endif %}
+                    {% set_global work_form_title = false %}
+                    {% set_global work_form = false %}
+                    {% set_global work_form_thumbnail = false %}
+                    {% set_global work_form_reponse = false %}
+                  {% elif key == "link" and value %}
+                    {% for key, value in value %}
+                      {% if key == "title" and value %}
+                        {% set_global work_link_title = value %}
+                      {% elif key == "url" and value %}
+                        {% set_global work_lnk = value %}
+                      {% elif key == "thumbnailUrl" and value and url_ok(url=value) %}
+                        {% set_global work_link_thumbnail = value %}
+                      {% endif %}
+                    {% endfor %}
+                    {% if work_link_title and not work_lnk %}
+                      <div> Link to: {{ work_link_title }} </div>
+                    {% elif not work_link_title and work_lnk %}
+                      <div> Link: <a href={{ work_lnk }}> {{ work_lnk }} </a> </div>
+                    {% elif work_link_title and work_lnk %}
+                      <div> Link: <a href={{ work_lnk }}> {{ work_link_title }} </a> </div>
+                    {% endif %}
+                    {% set_global work_link_title = false %}
+                    {% set_global work_lnk = false %}
+                    {% set_global work_link_thumbnail = false %}
+                  {% elif key == "youtubeVideo" and value %}
+                    {% for key, value in value %}
+                      {% if key == "title" and value %}
+                       {% set_global work_video_title = value %}
+                      {% elif key == "alternateLink" and value %}
+                       {% set_global work_video = value %}
+                      {% elif key == "thumbnailUrl" and value and url_ok(url=value) %}
+                       {% set_global work_video_thumbnail = value %}
+                      {% endif %}
+                    {% endfor %}
+                    {% if work_video_title and not work_video and not work_video_thumbnail %}
+                      <div> Video (Link not Provided): {{ work_video_title }} </div>
+                    {% elif not work_video_title and work_video and not work_video_thumbnail %}
+                      <div> Link to video: <a href={{ work_video }}> {{ work_video }} </a> </div>
+                    {% elif work_video_title and work_video and not work_video_thumbnail %}
+                      <div> <a href={{ work_video }}> {{ work_video_title }} </a> </div>
+                    {% elif not work_video_title and not work_video and work_video_thumbnail %}
+                      <div> Video: </div>
+                      <div> <img src={{ work_video_thumbnail }}> </div>
+                    {% elif work_video_title and not work_video and work_video_thumbnail %}
+                      <div> Video: {{ work_video_title }} </div>
+                      <div> <img src={{ work_video_thumbnail }}> </div>
+                    {% elif not work_video_title and work_video and work_video_thumbnail %}
+                      <div> Video: <a href={{ work_video }}> {{ work_video }} </a> </div>
+                      <div> <a href={{ work_video }}> <img src={{ work_video_thumbnail }}> </a> </div>
+                    {% elif work_video_title and work_video and work_video_thumbnail %}
+                      <div> Video: <a href={{ work_video }}> {{ work_video_title }} </a> </div>
+                      <div> <a href={{ work_video }}> <img src={{ work_video_thumbnail }}> </a> </div>
+                    {% endif %}
+                    {% set_global work_video_title = false %}
+                    {% set_global work_video = false %}
+                    {% set_global work_video_thumbnail = false %}
+                  {% endif %}
+                {% endfor %}
+             {% endfor %}
+            {% endif %}
+           <br>
+          {% endif %}
+        {% endfor %}
+     </div>
+     {% endif %}
     {% if course_materials %}
      <div id="Materials" class="content">
        <h2>Course Materials</h2>
@@ -339,7 +628,7 @@
                 {% for key, value in value %}
                   {% if key == "title" and value %}
                    {% set_global course_material_form_title = value %}
-                  {% elif key == "form" and value %}
+                  {% elif key == "formUrl\" and value %}
                    {% set_global course_material_form = value %}
                   {% elif key == "thumbnailUrl" and value and url_ok(url=value) %}
                    {% set_global course_material_form_thumbnail = value %}

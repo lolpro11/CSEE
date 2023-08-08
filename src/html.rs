@@ -9,8 +9,8 @@ use tera::Tera;
 use tera::Context;
 use tokio::task;
 use std::{fs::File, io::Write, collections::HashMap};
-use std::sync::{Arc, Mutex};
-use tokio::runtime::Builder;
+use std::sync::{Arc, Mutex, mpsc};
+use tokio::runtime::{Builder, Runtime};
 
 #[tokio::main]
 async fn main() {
@@ -86,11 +86,44 @@ async fn main() {
             Err(tera::Error::msg("No 'id' argument provided"))
         }
     });
+
+    async fn check_url(url: String) -> bool {
+        match reqwest::get(&url).await {
+            Ok(response) => response.status() == reqwest::StatusCode::OK,
+            Err(_) => false,
+        }
+    }
     
+    // Register the Tera filter function
+    tera.register_function("url_ok", move |args: &HashMap<String, Value>| {
+        if let Some(url) = args.get("url").and_then(|v| v.as_str()) {
+            let url = url.to_string(); // Clone the URL for async closure
     
+            // Create a channel for communication between threads
+            let (sender, receiver) = mpsc::channel();
+    
+            // Spawn a new thread to run the async block
+            std::thread::spawn(move || {
+                let runtime = Runtime::new().unwrap();
+                let result = runtime.block_on(async move {
+                    check_url(url).await
+                });
+                let _ = sender.send(result);
+            });
+    
+            // Wait for the result from the spawned thread
+            let result = receiver.recv().unwrap();
+    
+            Ok(Value::Bool(result))
+        } else {
+            Err(tera::Error::msg("No 'url' argument provided"))
+        }
+    });
+
     file.write_all(&buffer).expect("Failed to write to file");
     buffer = Vec::new();
     for course in response.1.courses.unwrap() {
+        context = Context::new();
         let the_id = course.clone().id.unwrap();
         println!("Course: {}, {}", course.name.clone().unwrap(), the_id);
         tera.add_template_file("templates/course.html", Some("course")).unwrap();
@@ -215,38 +248,7 @@ async fn main() {
         }
         let course_materials: (Response<Body>, ListCourseWorkMaterialResponse) = courses.course_work_materials_list(&the_id).doit().await.unwrap();
         if course_materials.1.course_work_material.is_some() {
-            for course_mats in course_materials.1.course_work_material.unwrap() {
-                if course_mats.assignee_mode.is_none() {
-                    if course_mats.alternate_link.is_some() {
-                        println!("Link to work {}", course_mats.alternate_link.unwrap());
-                    } else {
-                        println!("No link");
-                    }
-                    println!("time made: {:#?}", course_mats.creation_time.unwrap());
-                    if course_mats.scheduled_time.is_some() {
-                        println!("time published: {}", course_mats.scheduled_time.unwrap());
-                    }
-                    println!("Author id: {}", match course_mats.creator_user_id {
-                        Some(creator_user_id) => creator_user_id,
-                        None => "Unknown Author id".to_string()
-                    });
-                    println!("Material: {}", match course_mats.description {
-                        Some(description) => description,
-                        None => "None".to_string()
-                    });
-                    if course_mats.id.is_some() {
-                        println!("Id: {}", course_mats.id.unwrap());
-                    }
-                    if course_mats.topic_id.is_some() {
-                        println!("In Topic Id: {}", course_mats.topic_id.unwrap());
-                    }
-                    println!("last updated: {:#?}", match course_mats.update_time {
-                        Some(update_time) => update_time,
-                        None => course_mats.creation_time.unwrap()
-                    });
-                    println!(" ");
-                }
-            }
+            context.insert("course_materials", &course_materials.1.course_work_material.clone().unwrap());
         }
         let teachers: (Response<Body>, ListTeachersResponse) = courses.teachers_list(&the_id).doit().await.unwrap();
         if teachers.1.teachers.is_some() {
@@ -254,18 +256,7 @@ async fn main() {
         }
         let topics: (Response<Body>, ListTopicResponse) = courses.topics_list(&the_id).doit().await.unwrap();
         if topics.1.topic.is_some() {
-            for topic in topics.1.topic.unwrap() {
-                if topic.topic_id.is_some() {
-                    println!("Topic Id: {}", topic.topic_id.unwrap());
-                }
-                if topic.name.is_some() {
-                    println!("{}", topic.name.unwrap());
-                }
-                if topic.update_time.is_some() {
-                    println!("last updated: {:#?}", topic.update_time);
-                }
-                println!("");
-            }
+            context.insert("topics", &topics.1.topic.clone().unwrap());
         }
         //let course_work_student_submission_list: (Response<Body>, ListStudentSubmissionsResponse) = courses.course_work_student_submissions_list(course_id: &the_id).doit().await.unwrap();
         println!("{:#?}", &context);

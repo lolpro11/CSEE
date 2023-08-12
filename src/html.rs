@@ -52,6 +52,7 @@ async fn main() {
     let mut buffer = Vec::new();
     let course_list = response.1.courses.clone().unwrap();
     tera.add_template_file("templates/courses.html", Some("course_list")).unwrap();
+    tera.add_template_file("templates/course.html", Some("course")).unwrap();
     context.insert("courses", &course_list);
     tera.render_to("course_list", &context, &mut buffer).unwrap();
     let mut file = File::create("html/courses.html").expect("Failed to create file");
@@ -154,7 +155,6 @@ async fn main() {
         context = Context::new();
         let the_id = course.clone().id.unwrap();
         println!("Course: {}, {}", course.name.clone().unwrap(), the_id);
-        tera.add_template_file("templates/course.html", Some("course")).unwrap();
         context.insert("course", &course);
         let course_announcements: (Response<Body>, ListAnnouncementsResponse) = courses.announcements_list(&the_id).doit().await.unwrap();
         if course_announcements.1.announcements.is_some() {

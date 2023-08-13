@@ -1,6 +1,8 @@
+use std::time::{Duration, Instant};
 extern crate google_classroom1 as classroom1;
-use classroom1::api::{ListAnnouncementsResponse, ListCoursesResponse, ListCourseWorkResponse, ListCourseWorkMaterialResponse, ListTeachersResponse, ListTopicResponse};
+use classroom1::api::{Announcement, CourseWork, CourseWorkMaterial, Teacher, Topic, ListCoursesResponse};
 use classroom1::{Classroom, hyper, hyper_rustls};
+use futures::StreamExt;
 use hyper::Body;
 use hyper::Response;
 use oauth2::Scope;
@@ -8,13 +10,26 @@ use serde_json::Value;
 use tera::Tera;
 use tera::Context;
 use tokio::task;
-use std::time::{Instant, Duration};
 use std::{fs::File, io::Write, collections::HashMap};
 use std::sync::{Arc, Mutex, mpsc};
 use tokio::runtime::{Builder, Runtime};
 
+#[derive(Debug, Clone)]
+struct CourseContent {
+    id: Option<String>,
+    course_announcements: Option<Vec<Announcement>>,
+    course_work: Option<Vec<CourseWork>>,
+    course_materials: Option<Vec<CourseWorkMaterial>>,
+    name: Option<String>,
+    teachers: Option<Vec<Teacher>>,
+    topics: Option<Vec<Topic>>,
+    tera: Tera,
+}
+
 #[tokio::main]
 async fn main() {
+
+    let threadcount = 500;
     let secret = classroom1::oauth2::read_application_secret("credentials.json")
         .await
         .expect("client secret couldn't be read.");
@@ -121,78 +136,74 @@ async fn main() {
             Err(tera::Error::msg("No 'url' argument provided"))
         }
     });
-
-    /*tera.register_function("to_utc", move |args: &HashMap<String, Value>| {
-        if let Some(date) = args.get("date") {
-            let utc_date = "".to_string();
-            match date.year {
-                Some(year) => date_due.push_str(&year.to_string()),
-                None => Err(tera::Error::msg("No 'date.month' argument"))
-            }
-            date_due.push_str("-");
-            match date.month {
-                Some(month) => date_due.push_str(&month.to_string()),
-                None => Err(tera::Error::msg("No 'date.month' argument"))
-            }
-            date_due.push_str("-");
-            match date.day {
-                Some(day) => date_due.push_str(&day.to_string()),
-                None => Err(tera::Error::msg("No 'date.day' argument"))
-            }
     
-            Ok(Value::Bool(result))
-        } else {
-            Err(tera::Error::msg("No 'date or time' argument provided"))
-        }
-    });*/
-
     file.write_all(&buffer).expect("Failed to write to file");
-    buffer = Vec::new();
     let mut total_duration = Duration::new(0, 0);
-    let num_iterations = response.1.courses.clone().unwrap().len();
+
+    let mut reqquery_vec: Vec<CourseContent> = Vec::new();
     for course in response.1.courses.unwrap() {
         let start_time = Instant::now();
-        context = Context::new();
         let the_id = course.clone().id.unwrap();
-        println!("Course: {}, {}", course.name.clone().unwrap(), the_id);
-        context.insert("name", &course.name.clone().unwrap());
-        let course_announcements: (Response<Body>, ListAnnouncementsResponse) = courses.announcements_list(&the_id).doit().await.unwrap();
-        if course_announcements.1.announcements.is_some() {
-            context.insert("course_announcements", &course_announcements.1.announcements.clone().unwrap());
-        }
-        let course_work: (Response<Body>, ListCourseWorkResponse) = courses.course_work_list(&the_id).doit().await.unwrap();
-        if course_work.1.course_work.is_some() {
-            context.insert("coursework", &course_work.1.course_work.clone().unwrap());
-        }
-        let course_materials: (Response<Body>, ListCourseWorkMaterialResponse) = courses.course_work_materials_list(&the_id).doit().await.unwrap();
-        if course_materials.1.course_work_material.is_some() {
-            context.insert("course_materials", &course_materials.1.course_work_material.clone().unwrap());
-        }
-        let teachers: (Response<Body>, ListTeachersResponse) = courses.teachers_list(&the_id).doit().await.unwrap();
-        if teachers.1.teachers.is_some() {
-            context.insert("teachers", &teachers.1.teachers.clone().unwrap());
-        }
-        let topics: (Response<Body>, ListTopicResponse) = courses.topics_list(&the_id).doit().await.unwrap();
-        if topics.1.topic.is_some() {
-            context.insert("topics", &topics.1.topic.clone().unwrap());
-        }
-        //let course_work_student_submission_list: (Response<Body>, ListStudentSubmissionsResponse) = courses.course_work_student_submissions_list(course_id: &the_id).doit().await.unwrap();
-        //println!("{:#?}", &context);
-        tera.render_to("course", &context, &mut buffer).unwrap();
-        let mut file = File::create(format!("html/courses/{}.html", the_id)).expect("Failed to create file");
-        file.write_all(&buffer).expect("Failed to write to file");
-        buffer = Vec::new();
-        let end_time = Instant::now();
-        let iteration_duration = end_time - start_time;
-        println!("Render Time: {:?}", iteration_duration);
-        total_duration += iteration_duration;
+        let course_content = CourseContent {
+            id: Some(course.clone().id.unwrap()),
+            course_announcements: Some(courses.announcements_list(&the_id).doit().await.unwrap().1.announcements.clone().unwrap_or_default()),
+            course_work: Some(courses.course_work_list(&the_id).doit().await.unwrap().1.course_work.clone().unwrap_or_default()),
+            course_materials: Some(courses.course_work_materials_list(&the_id).doit().await.unwrap().1.course_work_material.clone().unwrap_or_default()),
+            name: Some(course.name.clone().unwrap_or_default()),
+            teachers: Some(courses.teachers_list(&the_id).doit().await.unwrap().1.teachers.clone().unwrap_or_default()),
+            topics: Some(courses.topics_list(&the_id).doit().await.unwrap().1.topic.clone().unwrap_or_default()),
+            tera: tera.clone(),
+        };
+        reqquery_vec.push(course_content);
+        println!("Pulling Data From {}", course.name.clone().unwrap());
+        println!(
+            "Took {:?}",
+            start_time.elapsed(),
+        );
     }
-    let average_duration = total_duration / num_iterations as u32;
-    println!("Average time per iteration: {:?}", average_duration);
+
+    
+    loop {
+        let lastloop = Instant::now();
+        let fetches = futures::stream::iter(reqquery_vec.clone().into_iter().map(|course| {
+            async move {
+                let start_time = Instant::now();
+                let mut buffer = Vec::new();
+                let mut context = Context::new();
+                println!("Course: {}, {}", course.name.clone().unwrap(), course.id.clone().unwrap());
+                context.insert("name", &course.name.clone().unwrap());
+                if course.course_announcements.is_some() {
+                    context.insert("course_announcements", &course.course_announcements.clone().unwrap());
+                }
+                if course.course_work.is_some() {
+                    context.insert("coursework", &course.course_work.clone().unwrap());
+                }
+                if course.course_materials.is_some() {
+                    context.insert("course_materials", &course.course_materials.clone().unwrap());
+                }
+                if course.teachers.is_some() {
+                    context.insert("teachers", &course.teachers.clone().unwrap());
+                }
+                if course.topics.is_some() {
+                    context.insert("topics", &course.topics.clone().unwrap());
+                }
+                //let course_work_student_submission_list: (Response<Body>, ListStudentSubmissionsResponse) = courses.course_work_student_submissions_list(course_id: &the_id).doit().await.unwrap();
+                //println!("{:#?}", &context);
+                course.tera.render_to("course", &context, &mut buffer).unwrap();
+                let mut file = File::create(format!("html/courses/{}.html", course.id.unwrap())).expect("Failed to create file");
+                file.write_all(&buffer).expect("Failed to write to file");
+                let end_time = Instant::now();
+                let iteration_duration = end_time - start_time;
+                println!("Render Time: {:?}", iteration_duration);
+                total_duration += iteration_duration;
+        }}))
+        .buffer_unordered(threadcount)
+        .collect::<Vec<()>>();
+        fetches.await;
+
+        println!(
+            "loop time is: {:?}",
+            lastloop.elapsed(),
+        );
+    }
 }
-
-//str - Stack allocated, not mutable (usually). have to know size at compile time.
-
-//String - Heap allocated, can be mutable (with 1 referance only OR Rust mem lock like RWlock), can grow or shrink size.
-
-//char - single character, including unicode, can be mutable

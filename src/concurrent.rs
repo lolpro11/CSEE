@@ -29,7 +29,7 @@ struct CourseContent {
 #[tokio::main]
 async fn main() {
 
-    let threadcount = 500;
+    let threadcount = 25;
     let secret = classroom1::oauth2::read_application_secret("credentials.json")
         .await
         .expect("client secret couldn't be read.");

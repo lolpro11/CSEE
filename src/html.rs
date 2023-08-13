@@ -1,5 +1,5 @@
 extern crate google_classroom1 as classroom1;
-use classroom1::api::{ListAnnouncementsResponse, ListCoursesResponse, ListCourseWorkResponse, ListCourseWorkMaterialResponse, ListTeachersResponse, ListTopicResponse};
+use classroom1::api::{Announcement, CourseWork, CourseWorkMaterial, Teacher, Topic, ListCoursesResponse};
 use classroom1::{Classroom, hyper, hyper_rustls};
 use hyper::Body;
 use hyper::Response;
@@ -8,12 +8,24 @@ use serde_json::Value;
 use tera::Tera;
 use tera::Context;
 use tokio::task;
-use std::time::{Instant, Duration};
+use std::time::Instant;
 use std::{fs::File, io::Write, collections::HashMap};
 use std::sync::{Arc, Mutex, mpsc};
 use tokio::runtime::{Builder, Runtime};
 
-#[tokio::main]
+#[derive(Debug, Clone)]
+struct CourseContent {
+    id: Option<String>,
+    course_announcements: Option<Vec<Announcement>>,
+    course_work: Option<Vec<CourseWork>>,
+    course_materials: Option<Vec<CourseWorkMaterial>>,
+    name: Option<String>,
+    teachers: Option<Vec<Teacher>>,
+    topics: Option<Vec<Topic>>,
+    tera: Tera,
+}
+
+#[tokio::main (flavor = "multi_thread", worker_threads = 100) ]
 async fn main() {
     let secret = classroom1::oauth2::read_application_secret("credentials.json")
         .await
@@ -147,48 +159,63 @@ async fn main() {
     });*/
 
     file.write_all(&buffer).expect("Failed to write to file");
-    buffer = Vec::new();
-    let mut total_duration = Duration::new(0, 0);
-    let num_iterations = response.1.courses.clone().unwrap().len();
+    let mut reqquery_vec: Vec<CourseContent> = Vec::new();
+
     for course in response.1.courses.unwrap() {
+        println!("Pulling Data From {}", course.name.clone().unwrap());
         let start_time = Instant::now();
-        context = Context::new();
         let the_id = course.clone().id.unwrap();
-        println!("Course: {}, {}", course.name.clone().unwrap(), the_id);
-        context.insert("name", &course.name.clone().unwrap());
-        let course_announcements: (Response<Body>, ListAnnouncementsResponse) = courses.announcements_list(&the_id).doit().await.unwrap();
-        if course_announcements.1.announcements.is_some() {
-            context.insert("course_announcements", &course_announcements.1.announcements.clone().unwrap());
-        }
-        let course_work: (Response<Body>, ListCourseWorkResponse) = courses.course_work_list(&the_id).doit().await.unwrap();
-        if course_work.1.course_work.is_some() {
-            context.insert("coursework", &course_work.1.course_work.clone().unwrap());
-        }
-        let course_materials: (Response<Body>, ListCourseWorkMaterialResponse) = courses.course_work_materials_list(&the_id).doit().await.unwrap();
-        if course_materials.1.course_work_material.is_some() {
-            context.insert("course_materials", &course_materials.1.course_work_material.clone().unwrap());
-        }
-        let teachers: (Response<Body>, ListTeachersResponse) = courses.teachers_list(&the_id).doit().await.unwrap();
-        if teachers.1.teachers.is_some() {
-            context.insert("teachers", &teachers.1.teachers.clone().unwrap());
-        }
-        let topics: (Response<Body>, ListTopicResponse) = courses.topics_list(&the_id).doit().await.unwrap();
-        if topics.1.topic.is_some() {
-            context.insert("topics", &topics.1.topic.clone().unwrap());
-        }
-        //let course_work_student_submission_list: (Response<Body>, ListStudentSubmissionsResponse) = courses.course_work_student_submissions_list(course_id: &the_id).doit().await.unwrap();
-        //println!("{:#?}", &context);
-        tera.render_to("course", &context, &mut buffer).unwrap();
-        let mut file = File::create(format!("html/courses/{}.html", the_id)).expect("Failed to create file");
-        file.write_all(&buffer).expect("Failed to write to file");
-        buffer = Vec::new();
-        let end_time = Instant::now();
-        let iteration_duration = end_time - start_time;
-        println!("Render Time: {:?}", iteration_duration);
-        total_duration += iteration_duration;
+        let course_content = CourseContent {
+            id: Some(course.clone().id.unwrap()),
+            course_announcements: Some(courses.announcements_list(&the_id).doit().await.unwrap().1.announcements.clone().unwrap_or_default()),
+            course_work: Some(courses.course_work_list(&the_id).doit().await.unwrap().1.course_work.clone().unwrap_or_default()),
+            course_materials: Some(courses.course_work_materials_list(&the_id).doit().await.unwrap().1.course_work_material.clone().unwrap_or_default()),
+            name: Some(course.name.clone().unwrap_or_default()),
+            teachers: Some(courses.teachers_list(&the_id).doit().await.unwrap().1.teachers.clone().unwrap_or_default()),
+            topics: Some(courses.topics_list(&the_id).doit().await.unwrap().1.topic.clone().unwrap_or_default()),
+            tera: tera.clone(),
+        };
+        reqquery_vec.push(course_content);
+        println!(
+            "Took {:?}",
+            start_time.elapsed(),
+        );
     }
-    let average_duration = total_duration / num_iterations as u32;
-    println!("Average time per iteration: {:?}", average_duration);
+
+    let tasks: Vec<_> = reqquery_vec.iter().map(|course| {
+        let course = course.clone();
+        tokio::spawn(async move {
+            let start_time = Instant::now();
+            let mut buffer = Vec::new();
+            let mut context = Context::new();
+            context.insert("name", &course.name.clone().unwrap());
+            if course.course_announcements.is_some() {
+                context.insert("course_announcements", &course.course_announcements.clone().unwrap());
+            }
+            if course.course_work.is_some() {
+                context.insert("coursework", &course.course_work.clone().unwrap());
+            }
+            if course.course_materials.is_some() {
+                context.insert("course_materials", &course.course_materials.clone().unwrap());
+            }
+            if course.teachers.is_some() {
+                context.insert("teachers", &course.teachers.clone().unwrap());
+            }
+            if course.topics.is_some() {
+                context.insert("topics", &course.topics.clone().unwrap());
+            }
+            //let course_work_student_submission_list: (Response<Body>, ListStudentSubmissionsResponse) = courses.course_work_student_submissions_list(course_id: &the_id).doit().await.unwrap();
+            //println!("{:#?}", &context);
+            course.tera.render_to("course", &context, &mut buffer).unwrap();
+            let mut file = File::create(format!("html/courses/{}.html", course.clone().id.unwrap())).expect("Failed to create file");
+            file.write_all(&buffer).expect("Failed to write to file");
+            let end_time = Instant::now();
+            let iteration_duration = end_time - start_time;
+            println!("Course: {}, {}\nRender Time: {:?}", course.name.clone().unwrap(), course.clone().id.unwrap(), iteration_duration);
+        })
+    }).collect();
+    futures::future::join_all(tasks).await;
+
 }
 
 //str - Stack allocated, not mutable (usually). have to know size at compile time.

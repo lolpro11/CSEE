@@ -2,4 +2,4 @@ credentials.json
 tokens.json
 target/
 *.log
-html/courses/
+html/courses/*

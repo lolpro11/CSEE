@@ -12,7 +12,7 @@ dependencies = [
  "google-classroom1",
  "google-drive",
  "hyper",
- "hyper-rustls 0.24.1",
+ "hyper-rustls",
  "lazy_static",
  "oauth2",
  "reqwest",
@@ -835,9 +835,9 @@ dependencies = [
 
 [[package]]
 name = "google-apis-common"
-version = "5.0.2"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf0d0bf11c1a1c1c304a7379fa173659bda32fdd2f042c5af5a066f547cb2fef"
+checksum = "87ee789438087de4e6aa14e8505f661d4f45b161f2d21807c1fee0d68b54732d"
 dependencies = [
  "base64 0.13.1",
  "chrono",
@@ -856,15 +856,15 @@ dependencies = [
 
 [[package]]
 name = "google-classroom1"
-version = "5.0.2+20230119"
+version = "5.0.3+20230119"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bf256f44571e83a7c4a0beeec180586c54e9c914cdb99bd5199141187826146"
+checksum = "791a16a3364f6a34e490563bcada2dd3eb8acc7768ad374aa98a621a97157da2"
 dependencies = [
  "anyhow",
  "google-apis-common",
  "http",
  "hyper",
- "hyper-rustls 0.23.2",
+ "hyper-rustls",
  "itertools",
  "mime",
  "serde",
@@ -1015,21 +1015,6 @@ dependencies = [
 
 [[package]]
 name = "hyper-rustls"
-version = "0.23.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1788965e61b367cd03a62950836d5cd41560c3577d90e40e0819373194d1661c"
-dependencies = [
- "http",
- "hyper",
- "log",
- "rustls 0.20.8",
- "rustls-native-certs",
- "tokio",
- "tokio-rustls 0.23.4",
-]
-
-[[package]]
-name = "hyper-rustls"
 version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d78e1e73ec14cf7375674f74d7dde185c8206fd9dea6fb6295e8a98098aaa97"
@@ -1038,10 +1023,10 @@ dependencies = [
  "http",
  "hyper",
  "log",
- "rustls 0.21.6",
+ "rustls",
  "rustls-native-certs",
  "tokio",
- "tokio-rustls 0.24.1",
+ "tokio-rustls",
 ]
 
 [[package]]
@@ -1780,7 +1765,7 @@ dependencies = [
  "http",
  "http-body",
  "hyper",
- "hyper-rustls 0.24.1",
+ "hyper-rustls",
  "hyper-tls",
  "ipnet",
  "js-sys",
@@ -1791,14 +1776,14 @@ dependencies = [
  "once_cell",
  "percent-encoding 2.3.0",
  "pin-project-lite",
- "rustls 0.21.6",
+ "rustls",
  "rustls-pemfile",
  "serde",
  "serde_json",
  "serde_urlencoded",
  "tokio",
  "tokio-native-tls",
- "tokio-rustls 0.24.1",
+ "tokio-rustls",
  "tower-service",
  "url 2.4.0",
  "wasm-bindgen",
@@ -1926,18 +1911,6 @@ dependencies = [
  "libc",
  "linux-raw-sys",
  "windows-sys",
-]
-
-[[package]]
-name = "rustls"
-version = "0.20.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fff78fc74d175294f4e83b28343315ffcfb114b156f0185e9741cb5570f50e2f"
-dependencies = [
- "log",
- "ring",
- "sct",
- "webpki",
 ]
 
 [[package]]
@@ -2466,22 +2439,11 @@ dependencies = [
 
 [[package]]
 name = "tokio-rustls"
-version = "0.23.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c43ee83903113e03984cb9e5cebe6c04a5116269e900e3ddba8f068a62adda59"
-dependencies = [
- "rustls 0.20.8",
- "tokio",
- "webpki",
-]
-
-[[package]]
-name = "tokio-rustls"
 version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c28327cf380ac148141087fbfb9de9d7bd4e84ab5d2c28fbc911d753de8a7081"
 dependencies = [
- "rustls 0.21.6",
+ "rustls",
  "tokio",
 ]
 
@@ -2958,11 +2920,11 @@ dependencies = [
  "futures",
  "http",
  "hyper",
- "hyper-rustls 0.24.1",
+ "hyper-rustls",
  "itertools",
  "log",
  "percent-encoding 2.3.0",
- "rustls 0.21.6",
+ "rustls",
  "rustls-pemfile",
  "seahash",
  "serde",

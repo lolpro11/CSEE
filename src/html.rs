@@ -9,11 +9,10 @@ use oauth2::Scope;
 use serde_json::Value;
 use tera::Tera;
 use tera::Context;
-use tokio::task;
 use std::time::Instant;
 use std::{fs::File, io::Write, collections::HashMap};
-use std::sync::{Arc, Mutex, mpsc};
-use tokio::runtime::{Builder, Runtime};
+use std::sync::mpsc;
+use tokio::runtime::Runtime;
 
 #[derive(Clone)]
 struct Args {
@@ -67,33 +66,47 @@ async fn main() {
     tera.render_to("course_list", &context, &mut buffer).unwrap();
     let mut file = File::create("html/courses.html").expect("Failed to create file");
 
-    let hub_arc = Arc::new(Mutex::new(hub.clone()));
+    async fn getusername(id: String) -> String {
+        let secret = classroom1::oauth2::read_application_secret("credentials.json")
+        .await
+        .expect("client secret couldn't be read.");
+        let auth = classroom1::oauth2::InstalledFlowAuthenticator::builder(
+            secret,
+            classroom1::oauth2::InstalledFlowReturnMethod::HTTPRedirect,
+        )
+        .persist_tokens_to_disk("tokens.json")
+        .build()
+        .await
+        .expect("InstalledFlowAuthenticator failed to build");
+        let hub = Classroom::new(hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().https_or_http().enable_http1().build()), auth);
+        let user_profile = hub.user_profiles().get(&id).doit().await;
+        match user_profile {
+            Ok(profile) => {
+                let name = profile.1.name.unwrap().full_name.unwrap_or_else(|| "None".to_string());
+                name
+            }
+            Err(_) => {
+                let name = "None".to_string();
+                name
+            },
+        }
+    }
 
     tera.register_function("getusername", move |args: &HashMap<String, Value>| {
         if let Some(id) = args.get("id").and_then(|v| v.as_str()) {
-            let hub_mutex = &hub_arc.lock().unwrap(); // Acquire the lock to access hub
-    
-            let user_profile = task::block_in_place(|| {
-                let runtime = Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .unwrap();
-                runtime.block_on(async move {
-                    hub_mutex.user_profiles().get(id).doit().await
-                })
+            let id = id.to_string(); // Clone the URL for async closure
+            let (sender, receiver) = mpsc::channel();
+            std::thread::spawn(move || {
+                let runtime = Runtime::new().unwrap();
+                let result = runtime.block_on(async move {
+                    getusername(id).await
+                });
+                let _ = sender.send(result);
             });
-            match user_profile {
-                Ok(profile) => {
-                    let name = profile.1.name.unwrap().full_name.unwrap_or_else(|| "None".to_string());
-                    let name_value: Value = Value::String(name);
-                    Ok(name_value)
-                }
-                Err(_) => {
-                    let name = "None".to_string();
-                    let name_value: Value = Value::String(name);
-                    Ok(name_value)
-                },
-            }
+    
+            // Wait for the result from the spawned thread
+            let result = receiver.recv().unwrap();
+            Ok(Value::String(result))
         } else {
             Err(tera::Error::msg("No 'id' argument provided"))
         }
@@ -110,11 +123,7 @@ async fn main() {
     tera.register_function("url_ok", move |args: &HashMap<String, Value>| {
         if let Some(url) = args.get("url").and_then(|v| v.as_str()) {
             let url = url.to_string(); // Clone the URL for async closure
-    
-            // Create a channel for communication between threads
             let (sender, receiver) = mpsc::channel();
-    
-            // Spawn a new thread to run the async block
             std::thread::spawn(move || {
                 let runtime = Runtime::new().unwrap();
                 let result = runtime.block_on(async move {

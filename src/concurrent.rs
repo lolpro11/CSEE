@@ -1,33 +1,19 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 extern crate google_classroom1 as classroom1;
 use classroom1::api::ListCoursesResponse;
-use classroom1::hyper_rustls::HttpsConnector;
 use classroom1::{Classroom, hyper, hyper_rustls};
-use futures::StreamExt;
-use hyper::Body;
-use hyper::Response;
-use hyper::client::HttpConnector;
+use hyper::{Body, Response};
 use oauth2::Scope;
 use serde_json::Value;
-use tera::Tera;
-use tera::Context;
-use tokio::task;
+use tera::{Tera, Context};
+use tokio::{task, runtime};
 use std::{fs::File, io::Write, collections::HashMap};
 use std::sync::{Arc, Mutex, mpsc};
 use tokio::runtime::{Builder, Runtime};
 
-#[derive(Clone)]
-struct Args {
-    id: Option<String>,
-    name: Option<String>,
-    hub: Option<Classroom<HttpsConnector<HttpConnector>>>,
-    tera: Option<Tera>,
-}
-
 #[tokio::main]
 async fn main() {
 
-    let threadcount = 25;
     let secret = classroom1::oauth2::read_application_secret("credentials.json")
         .await
         .expect("client secret couldn't be read.");
@@ -57,8 +43,7 @@ async fn main() {
     }
 
     let hub = Classroom::new(hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().https_or_http().enable_http1().build()), auth);
-    let courses = hub.courses();
-    let response: (Response<Body>, ListCoursesResponse) = courses.list().page_size(100).doit().await.unwrap();
+    let response: (Response<Body>, ListCoursesResponse) = hub.courses().list().page_size(100).doit().await.unwrap();
 
     let mut tera = Tera::new("../templates/**/*.html").unwrap();
     let mut context = Context::new();
@@ -135,70 +120,61 @@ async fn main() {
         }
     });
     
-    file.write_all(&buffer).expect("Failed to write to file");
-    let mut total_duration = Duration::new(0, 0);
-
-    let mut reqquery_vec: Vec<Args> = Vec::new();
-    for course in response.1.courses.unwrap() {
-        let course_content = Args {
-            id: Some(course.clone().id.unwrap()),
-            name: Some(course.name.clone().unwrap_or_default()),
-            hub: Some(hub.clone()),
-            tera: Some(tera.clone()),
-        };
-        reqquery_vec.push(course_content);
-    }
+    let threaded_rt = runtime::Builder::new_multi_thread()
+            .worker_threads(16)
+            .enable_all()
+            .build()
+            .unwrap();
+    let mut handles = vec![];
 
     
-    loop {
-        let lastloop = Instant::now();
-        let fetches = futures::stream::iter(reqquery_vec.clone().into_iter().map(|course| {
-            async move {
-                let start_time = Instant::now();
-                let mut buffer = Vec::new();
-                let mut context = Context::new();
-                let string_id = course.clone().id.clone().unwrap();
-                let id = string_id.as_str();
-                println!("Pulling Data From {}", course.name.clone().unwrap());
-                let course_announcements = Some(course.hub.clone().unwrap().courses().announcements_list(&id).doit().await.unwrap().1.announcements.clone().unwrap_or_default());
-                let course_work = Some(course.hub.clone().unwrap().courses().course_work_list(&id).doit().await.unwrap().1.course_work.clone().unwrap_or_default());
-                let course_materials = Some(course.hub.clone().unwrap().courses().course_work_materials_list(&id).doit().await.unwrap().1.course_work_material.clone().unwrap_or_default());
-                let name = Some(course.name.clone().unwrap_or_default());
-                let teachers = Some(course.hub.clone().unwrap().courses().teachers_list(&id).doit().await.unwrap().1.teachers.clone().unwrap_or_default());
-                let topics = Some(course.hub.clone().unwrap().courses().topics_list(&id).doit().await.unwrap().1.topic.clone().unwrap_or_default());
-                println!("Took {:?}", start_time.elapsed());
-                println!("Course: {}, {}", name.clone().unwrap(), id.clone());
-                context.insert("name", &name.clone().unwrap());
-                if course_announcements.is_some() {
-                    context.insert("course_announcements", &course_announcements.clone().unwrap());
-                }
-                if course_work.is_some() {
-                    context.insert("coursework", &course_work.clone().unwrap());
-                }
-                if course_materials.is_some() {
-                    context.insert("course_materials", &course_materials.clone().unwrap());
-                }
-                if teachers.is_some() {
-                    context.insert("teachers", &teachers.clone().unwrap());
-                }
-                if topics.is_some() {
-                    context.insert("topics", &topics.clone().unwrap());
-                }
-                //let course_work_student_submission_list: (Response<Body>, ListStudentSubmissionsResponse) = course.hub.clone().courses.unwrap().course_work_student_submissions_list(course_id: &id).doit().await.unwrap();
-                //println!("{:#?}", &context);
-                course.tera.unwrap().render_to("course", &context, &mut buffer).unwrap();
-                let mut file = File::create(format!("html/courses/{}.html", id)).expect("Failed to create file");
-                file.write_all(&buffer).expect("Failed to write to file");
-                println!("Render Time: {:?}", start_time.elapsed());
-                total_duration += start_time.elapsed();
-        }}))
-        .buffer_unordered(threadcount)
-        .collect::<Vec<()>>();
-        fetches.await;
-
-        println!(
-            "loop time is: {:?}",
-            lastloop.elapsed(),
-        );
+    file.write_all(&buffer).expect("Failed to write to file");
+    let total_duration= Instant::now();
+    for course in response.1.courses.unwrap() {
+        let hub_clone = hub.clone();
+        let tera_clone = tera.clone();
+        let handle = threaded_rt.spawn(async move {
+            let start_time = Instant::now();
+            let mut buffer: Vec<u8> = Vec::new();
+            let mut context = Context::new();
+            let string_id = course.clone().id.clone().unwrap();
+            let id = string_id.as_str();
+            println!("Pulling Data From {}", course.name.clone().unwrap());
+            
+            let hub_clone = hub_clone.clone();
+            let course_announcements = Some(hub_clone.courses().announcements_list(&id).doit().await.unwrap().1.announcements.unwrap());
+            let course_work = Some(hub_clone.courses().course_work_list(&id).doit().await.unwrap().1.course_work.clone().unwrap_or_else(|| Vec::new()));
+            let course_materials = Some(hub_clone.courses().course_work_materials_list(&id).doit().await.unwrap().1.course_work_material.clone().unwrap_or_default());
+            let name = Some(course.name.clone().unwrap_or_default());
+            let teachers = Some(hub_clone.courses().teachers_list(&id).doit().await.unwrap().1.teachers.clone().unwrap_or_default());
+            let topics = Some(hub_clone.courses().topics_list(&id).doit().await.unwrap().1.topic.clone().unwrap_or_default());
+            println!("Took {:?}", start_time.elapsed());
+            println!("Course: {}, {}", name.clone().unwrap(), id.clone());
+            context.insert("name", &name.clone());
+            if course_announcements.is_some() {
+                context.insert("course_announcements", &course_announcements.clone().unwrap());
+            }
+            if course_work.is_some() {
+                context.insert("coursework", &course_work.clone().unwrap());
+            }
+            if course_materials.is_some() {
+                context.insert("course_materials", &course_materials.clone().unwrap());
+            }
+            if teachers.is_some() {
+                context.insert("teachers", &teachers.clone().unwrap());
+            }
+            if topics.is_some() {
+                context.insert("topics", &topics.clone().unwrap());
+            }
+            tera_clone.render_to("course", &context, &mut buffer).unwrap();
+            let mut file = File::create(format!("html/courses/{}.html", id)).expect("Failed to create file");
+            file.write_all(&buffer).expect("Failed to write to file");
+            println!("Course: {}, {}\nRender Time: {:?}", course.name.clone().unwrap(), id, start_time.elapsed());
+        });
+        handles.push(handle);
     }
+    for handle in handles {
+        handle.await.expect("Async thread failed");
+    }
+    println!("Total Time {}", total_duration.elapsed().as_secs());
 }

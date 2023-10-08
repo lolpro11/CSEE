@@ -10,15 +10,15 @@ google-classroom1 = "*"
 tokio = { version = "1.32", features = ["full"] }
 hyper = "0.14.27"
 hyper-rustls = "0.24.1"
-serde = "1.0.185"
-serde_json = "1.0.105"
+serde = "1.0.188"
+serde_json = "1.0.107"
 futures = "0.3"
 tera = "1"
 lazy_static = "1.4.0"
-oauth2 = "4.4.1"
-actix-rt = "2.8.0"
-actix-web = "4.3.1"
-reqwest = { version = "0.11.18", features = ["blocking", "json"] }
+oauth2 = "4.4.2"
+actix-rt = "2.9.0"
+actix-web = "4.4.0"
+reqwest = { version = "0.11.22", features = ["blocking", "json"] }
 google-drive = "0.7.0"
 
 [[bin]]

@@ -10,7 +10,7 @@ google-classroom1 = "*"
 tokio = { version = "1.35", features = ["full"] }
 hyper = "1.1.0"
 hyper-rustls = "0.24.2"
-serde = "1.0.193"
+serde = "1.0.194"
 serde_json = "1.0.109"
 futures = "0.3"
 tera = "1"

@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 google-classroom1 = "*"
-tokio = { version = "1.35", features = ["full"] }
+tokio = { version = "1.36", features = ["full"] }
 hyper = "1.1.0"
 hyper-rustls = "0.26.0"
 serde = "1.0.196"

@@ -852,9 +852,9 @@ dependencies = [
 
 [[package]]
 name = "google-classroom1"
-version = "5.0.3+20230119"
+version = "5.0.4+20240227"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "791a16a3364f6a34e490563bcada2dd3eb8acc7768ad374aa98a621a97157da2"
+checksum = "922888aa4548a3de6267f7d122c6e1e6ab730f486be2bcd560f3fb14d47200f9"
 dependencies = [
  "anyhow",
  "google-apis-common",

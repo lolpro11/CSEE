@@ -9,7 +9,7 @@ edition = "2021"
 google-classroom1 = "*"
 tokio = { version = "1.37", features = ["full"] }
 hyper = "1.2.0"
-hyper-rustls = "0.27.0"
+hyper-rustls = "0.27.1"
 serde = "1.0.197"
 serde_json = "1.0.115"
 futures = "0.3"

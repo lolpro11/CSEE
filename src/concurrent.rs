@@ -42,7 +42,7 @@ async fn main() {
         Err(e) => println!("error: {:?}", e),
     }
 
-    let hub = Classroom::new(hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().https_or_http().enable_http1().build()), auth);
+    let hub = Classroom::new(hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().unwrap().https_or_http().enable_http1().build()), auth);
     let response: (Response<Body>, ListCoursesResponse) = hub.courses().list().page_size(100).doit().await.unwrap();
 
     let mut tera = Tera::new("../templates/**/*.html").unwrap();

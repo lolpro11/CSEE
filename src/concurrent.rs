@@ -149,7 +149,7 @@ async fn main() {
             let teachers = Some(hub_clone.courses().teachers_list(&id).doit().await.unwrap().1.teachers.clone().unwrap_or_default());
             let topics = Some(hub_clone.courses().topics_list(&id).doit().await.unwrap().1.topic.clone().unwrap_or_default());
             println!("Took {:?}", start_time.elapsed());
-            println!("Course: {}, {}", name.clone().unwrap(), id.clone());
+            println!("Course: {}, {}", name.clone().unwrap(), id);
             context.insert("name", &name.clone());
             if course_announcements.is_some() {
                 context.insert("course_announcements", &course_announcements.clone().unwrap());

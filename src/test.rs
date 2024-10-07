@@ -137,7 +137,7 @@ async fn fetch_classroom_data(auth_secret: ApplicationSecret) -> Result<(), MyEr
         .await
         .expect("Failed to build InstalledFlowAuthenticator");
 
-    let hub = Classroom::new(hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().https_or_http().enable_http1().build()), auth);
+    let hub = Classroom::new(hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().unwrap().https_or_http().enable_http1().build()), auth);
     let courses = hub.courses();
     let response: (Response<Body>, ListCoursesResponse) = courses.list().page_size(100).doit().await.unwrap();
 

@@ -142,12 +142,12 @@ async fn main() {
             println!("Pulling Data From {}", course.name.clone().unwrap());
             
             let hub_clone = hub_clone.clone();
-            let course_announcements = Some(hub_clone.courses().announcements_list(&id).doit().await.unwrap().1.announcements.unwrap());
-            let course_work = Some(hub_clone.courses().course_work_list(&id).doit().await.unwrap().1.course_work.clone().unwrap_or_else(|| Vec::new()));
-            let course_materials = Some(hub_clone.courses().course_work_materials_list(&id).doit().await.unwrap().1.course_work_material.clone().unwrap_or_default());
+            let course_announcements = Some(hub_clone.courses().announcements_list(id).doit().await.unwrap().1.announcements.unwrap());
+            let course_work = Some(hub_clone.courses().course_work_list(id).doit().await.unwrap().1.course_work.clone().unwrap_or_else(Vec::new));
+            let course_materials = Some(hub_clone.courses().course_work_materials_list(id).doit().await.unwrap().1.course_work_material.clone().unwrap_or_default());
             let name = Some(course.name.clone().unwrap_or_default());
-            let teachers = Some(hub_clone.courses().teachers_list(&id).doit().await.unwrap().1.teachers.clone().unwrap_or_default());
-            let topics = Some(hub_clone.courses().topics_list(&id).doit().await.unwrap().1.topic.clone().unwrap_or_default());
+            let teachers = Some(hub_clone.courses().teachers_list(id).doit().await.unwrap().1.teachers.clone().unwrap_or_default());
+            let topics = Some(hub_clone.courses().topics_list(id).doit().await.unwrap().1.topic.clone().unwrap_or_default());
             println!("Took {:?}", start_time.elapsed());
             println!("Course: {}, {}", name.clone().unwrap(), id);
             context.insert("name", &name.clone());

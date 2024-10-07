@@ -82,12 +82,12 @@ async fn main() {
         let user_profile = hub.user_profiles().get(&id).doit().await;
         match user_profile {
             Ok(profile) => {
-                let name = profile.1.name.unwrap().full_name.unwrap_or_else(|| "None".to_string());
-                name
+                
+                profile.1.name.unwrap().full_name.unwrap_or_else(|| "None".to_string())
             }
             Err(_) => {
-                let name = "None".to_string();
-                name
+                
+                "None".to_string()
             },
         }
     }
@@ -186,12 +186,12 @@ async fn main() {
             let mut context = Context::new();
             let string_id = course.clone().id.clone().unwrap();
             let id = string_id.as_str();
-            let course_announcements = Some(course.hub.clone().unwrap().courses().announcements_list(&id).doit().await.unwrap().1.announcements.clone().unwrap_or_default());
-            let course_work = Some(course.hub.clone().unwrap().courses().course_work_list(&id).doit().await.unwrap().1.course_work.clone().unwrap_or_default());
-            let course_materials = Some(course.hub.clone().unwrap().courses().course_work_materials_list(&id).doit().await.unwrap().1.course_work_material.clone().unwrap_or_default());
+            let course_announcements = Some(course.hub.clone().unwrap().courses().announcements_list(id).doit().await.unwrap().1.announcements.clone().unwrap_or_default());
+            let course_work = Some(course.hub.clone().unwrap().courses().course_work_list(id).doit().await.unwrap().1.course_work.clone().unwrap_or_default());
+            let course_materials = Some(course.hub.clone().unwrap().courses().course_work_materials_list(id).doit().await.unwrap().1.course_work_material.clone().unwrap_or_default());
             let name = Some(course.name.clone().unwrap_or_default());
-            let teachers = Some(course.hub.clone().unwrap().courses().teachers_list(&id).doit().await.unwrap().1.teachers.clone().unwrap_or_default());
-            let topics = Some(course.hub.clone().unwrap().courses().topics_list(&id).doit().await.unwrap().1.topic.clone().unwrap_or_default());
+            let teachers = Some(course.hub.clone().unwrap().courses().teachers_list(id).doit().await.unwrap().1.teachers.clone().unwrap_or_default());
+            let topics = Some(course.hub.clone().unwrap().courses().topics_list(id).doit().await.unwrap().1.topic.clone().unwrap_or_default());
             println!("Pulled Data From {}\nTook {:?}", course.name.clone().unwrap(), start_time.elapsed());
             context.insert("name", &name.clone().unwrap());
             if course_announcements.is_some() {

@@ -11,7 +11,7 @@ tokio = { version = "1.41", features = ["full"] }
 hyper = "1.5.0"
 hyper-rustls = "0.27"
 serde = "1.0.215"
-serde_json = "1.0.132"
+serde_json = "1.0.133"
 futures = "0.3"
 tera = "1"
 lazy_static = "1.5.0"

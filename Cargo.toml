@@ -19,7 +19,7 @@ oauth2 = "4.4.2"
 actix-rt = "2.11.0"
 actix-web = "4.12"
 reqwest = { version = "0.13", features = ["blocking", "json"] }
-google-drive = "0.7.0"
+google-drive = "0.10.0"
 
 [[bin]]
 name = "html"
